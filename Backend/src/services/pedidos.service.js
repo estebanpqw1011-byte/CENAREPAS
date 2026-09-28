@@ -6,6 +6,7 @@ import {
   ANTICIPACION_ANULAR_HORAS, COSTO_ENVIO, MUNICIPIOS_ENTREGA, SEDE_PEDIDOS_CLIENTE, TRANSICIONES_PEDIDO,
 } from '../config/negocio.js';
 import { CreditosService } from './creditos.service.js';
+import { eliminarSinAsociados } from '../utils/eliminacion.js';
 import { NotificacionesService } from './notificaciones.service.js';
 
 /**
@@ -441,6 +442,37 @@ export class PedidosService {
   }
 
   /** DELETE de la web: anula (nunca borra). */
+  /**
+   * Borrado definitivo: solo un pedido Pendiente sin abonos, crédito ni
+   * venta (aún no descontó stock). Borra en la misma transacción su detalle,
+   * su historial de estados y sus notificaciones. Los demás se anulan con
+   * motivo (409).
+   */
+  static eliminarDefinitivo(id) {
+    return eliminarSinAsociados({
+      tabla: 'pedido',
+      llave: 'id_pedido',
+      id,
+      noEncontrado: 'Pedido no encontrado',
+      validar: (db, pedido) => {
+        if (pedido.estado === 'Anulado') throw conflict('Este pedido ya está anulado y no se puede eliminar.');
+        if (pedido.estado !== 'Pendiente') {
+          throw conflict(`Solo se puede eliminar un pedido Pendiente; este está ${pedido.estado}. Anúlalo con un motivo.`);
+        }
+      },
+      asociados: [
+        { sql: 'SELECT 1 FROM abono WHERE id_pedido = $1', mensaje: 'Este pedido tiene abonos; anúlalo con un motivo.' },
+        { sql: 'SELECT 1 FROM credito WHERE id_pedido = $1', mensaje: 'Este pedido tiene un crédito; anúlalo con un motivo.' },
+        { sql: 'SELECT 1 FROM venta WHERE id_pedido = $1', mensaje: 'Este pedido tiene una venta asociada; anúlalo con un motivo.' },
+      ],
+      limpiar: [
+        'DELETE FROM detalle_pedido WHERE id_pedido = $1',
+        'DELETE FROM pedido_estado_historial WHERE id_pedido = $1',
+        'DELETE FROM notificacion WHERE id_pedido = $1',
+      ],
+    });
+  }
+
   static async anular(usuario, id, motivo) {
     const existe = await query('SELECT 1 FROM pedido WHERE id_pedido = $1', [id]);
     if (existe.rows.length === 0) return false;

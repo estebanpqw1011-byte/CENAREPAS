@@ -42,5 +42,7 @@ router.post('/', authorize('pedidos', 'crear'), PedidosController.create);
 router.put('/:id', authorize('pedidos', 'editar'), permisoDeEstado, PedidosController.update);
 router.patch('/:id/estado', authorize('pedidos', 'cambiar_estado'), permisoDeEstado, PedidosController.cambiarEstado);
 router.delete('/:id', authorize('pedidos', 'anular'), PedidosController.delete);
+// Borrado definitivo: solo Pendiente y sin abonos; el DELETE de arriba anula (lo usa la web).
+router.delete('/:id/definitivo', authorize('pedidos', 'eliminar'), PedidosController.eliminarDefinitivo);
 
 export default router;

@@ -54,6 +54,14 @@ export class PedidosController {
     } catch (e) { next(e); }
   }
 
+  /** DELETE /pedidos/:id/definitivo (pedidos:eliminar): solo Pendiente y sin abonos. */
+  static async eliminarDefinitivo(req, res, next) {
+    try {
+      await PedidosService.eliminarDefinitivo(req.params.id);
+      return successResponse(res, null, 'Pedido eliminado');
+    } catch (e) { next(e); }
+  }
+
   /** DELETE: anula (sin borrado físico). Acepta ?motivo= o { motivo }. */
   static async delete(req, res, next) {
     try {
