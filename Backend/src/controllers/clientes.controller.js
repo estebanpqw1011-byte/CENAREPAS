@@ -53,6 +53,14 @@ export class ClientesController {
     } catch (e) { next(e); }
   }
 
+  /** DELETE /clientes/:id/definitivo (clientes:eliminar): borra solo sin registros asociados. */
+  static async eliminarDefinitivo(req, res, next) {
+    try {
+      await ClientesService.eliminarDefinitivo(req.params.id);
+      return successResponse(res, null, 'Cliente eliminado');
+    } catch (e) { next(e); }
+  }
+
   static async delete(req, res, next) {
     try {
       const ok = await ClientesService.delete(req.params.id);

@@ -1,6 +1,7 @@
 import { query } from '../config/db.js';
 import { MUNICIPIOS_ENTREGA, TIPOS_DOCUMENTO } from '../config/negocio.js';
-import { badRequest } from '../utils/httpError.js';
+import { badRequest, conflict } from '../utils/httpError.js';
+import { eliminarSinAsociados } from '../utils/eliminacion.js';
 
 const texto = (valor) => (typeof valor === 'string' ? valor.trim() : '');
 
@@ -80,6 +81,27 @@ export class ClientesService {
   }
 
   /** Inactiva el registro (sin borrado físico: conserva el historial). */
+  /**
+   * Borrado definitivo (HU-104): solo sin pedidos, abonos, créditos, ventas
+   * ni cuenta en la app; si no, 409 y se ofrece inactivar.
+   */
+  static eliminarDefinitivo(id) {
+    return eliminarSinAsociados({
+      tabla: 'cliente',
+      llave: 'id_cliente',
+      id,
+      noEncontrado: 'Cliente no encontrado',
+      validar: (db, cliente) => {
+        if (cliente.id_usuario) throw conflict('Este cliente tiene una cuenta en la app; puedes inactivarlo.');
+      },
+      asociados: [
+        { sql: 'SELECT 1 FROM pedido WHERE id_cliente = $1', mensaje: 'Este cliente tiene pedidos asociados; puedes inactivarlo.' },
+        { sql: 'SELECT 1 FROM venta WHERE id_cliente = $1', mensaje: 'Este cliente tiene ventas asociadas; puedes inactivarlo.' },
+        { sql: 'SELECT 1 FROM abono WHERE id_cliente = $1 UNION ALL SELECT 1 FROM credito WHERE id_cliente = $1', mensaje: 'Este cliente tiene abonos o créditos asociados; puedes inactivarlo.' },
+      ],
+    });
+  }
+
   static async delete(id) {
     const res = await query(
       `UPDATE cliente SET estado = 'Inactivo' WHERE id_cliente = $1 RETURNING id_cliente`,
