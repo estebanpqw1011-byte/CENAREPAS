@@ -36,6 +36,14 @@ export class ProductosController {
     } catch (e) { next(e); }
   }
 
+  /** DELETE /productos/:id/definitivo (productos:eliminar): borra solo sin registros asociados. */
+  static async eliminarDefinitivo(req, res, next) {
+    try {
+      await ProductosService.eliminarDefinitivo(req.params.id);
+      return successResponse(res, null, 'Producto eliminado');
+    } catch (e) { next(e); }
+  }
+
   static async delete(req, res, next) {
     try {
       const ok = await ProductosService.delete(req.params.id);

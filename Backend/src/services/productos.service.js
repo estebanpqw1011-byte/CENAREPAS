@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { eliminarSinAsociados } from '../utils/eliminacion.js';
 
 export class ProductosService {
   /** soloActivos: el catálogo público solo ve productos activos de categorías activas. */
@@ -69,6 +70,20 @@ export class ProductosService {
       [nombre, descripcion, id_categoria, id_ficha, id_proveedor, precio_venta, imagen_url, stock_actual, stock_minimo, fecha_vencimiento, estado, id]
     );
     return res.rows[0] || null;
+  }
+
+  /** Borrado definitivo: solo sin pedidos ni ventas; si no, 409 y se ofrece inactivar. */
+  static eliminarDefinitivo(id) {
+    return eliminarSinAsociados({
+      tabla: 'producto',
+      llave: 'id_producto',
+      id,
+      noEncontrado: 'Producto no encontrado',
+      asociados: [
+        { sql: 'SELECT 1 FROM detalle_pedido WHERE id_producto = $1', mensaje: 'Este producto está en pedidos; puedes inactivarlo.' },
+        { sql: 'SELECT 1 FROM detalle_venta WHERE id_producto = $1', mensaje: 'Este producto está en ventas; puedes inactivarlo.' },
+      ],
+    });
   }
 
   /** Inactiva el registro (sin borrado físico: conserva el historial). */

@@ -11,5 +11,7 @@ router.get('/:id', optionalAuth, ProductosController.getById);
 router.post('/', authenticate, authorize('productos', 'crear'), ProductosController.create);
 router.put('/:id', authenticate, authorize('productos', 'editar'), ProductosController.update);
 router.delete('/:id', authenticate, authorize('productos', 'cambiar_estado'), ProductosController.delete);
+// Borrado definitivo, solo sin registros asociados; el DELETE de arriba inactiva (lo usa la web).
+router.delete('/:id/definitivo', authenticate, authorize('productos', 'eliminar'), ProductosController.eliminarDefinitivo);
 
 export default router;
