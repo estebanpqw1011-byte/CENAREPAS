@@ -36,6 +36,14 @@ export class CategoriasController {
     } catch (e) { next(e); }
   }
 
+  /** DELETE /categorias/:id/definitivo (categorias:eliminar): borra solo sin registros asociados. */
+  static async eliminarDefinitivo(req, res, next) {
+    try {
+      await CategoriasService.eliminarDefinitivo(req.params.id);
+      return successResponse(res, null, 'Categoría eliminada');
+    } catch (e) { next(e); }
+  }
+
   static async delete(req, res, next) {
     try {
       const ok = await CategoriasService.delete(req.params.id);

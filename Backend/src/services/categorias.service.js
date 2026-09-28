@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { eliminarSinAsociados } from '../utils/eliminacion.js';
 
 export class CategoriasService {
   /**
@@ -56,6 +57,19 @@ export class CategoriasService {
       [nombre, descripcion, estado, imagen_url, id]
     );
     return res.rows[0] || null;
+  }
+
+  /** Borrado definitivo: solo sin productos (activos o inactivos); si no, 409 y se ofrece inactivar. */
+  static eliminarDefinitivo(id) {
+    return eliminarSinAsociados({
+      tabla: 'categoria_producto',
+      llave: 'id_categoria',
+      id,
+      noEncontrado: 'Categoría no encontrada',
+      asociados: [
+        { sql: 'SELECT 1 FROM producto WHERE id_categoria = $1', mensaje: 'Esta categoría tiene productos asociados; puedes inactivarla.' },
+      ],
+    });
   }
 
   /** Inactiva el registro (sin borrado físico: conserva el historial). */
