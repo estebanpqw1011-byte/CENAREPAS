@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { query } from '../config/db.js';
 import { CONTRASENA_MIN } from '../config/negocio.js';
-import { badRequest } from '../utils/httpError.js';
+import { badRequest, conflict } from '../utils/httpError.js';
+import { eliminarSinAsociados } from '../utils/eliminacion.js';
 
 const SALT_ROUNDS = 10;
 // f: el mínimo del personal pasa de 6 a CONTRASENA_MIN (8). Solo aplica a
@@ -78,6 +79,44 @@ export class UsuariosService {
   }
 
   /** Inactiva el registro (sin borrado físico: conserva el historial). */
+  /**
+   * Borrado definitivo (HU-018): solo un usuario sin nada registrado a su
+   * nombre (pedidos, ventas, abonos, cambios de estado, compras, producción,
+   * auditoría ni cuenta de cliente). Nadie se borra a sí mismo, ni se borra
+   * el único Administrador activo. Si no, 409 y se ofrece inactivar.
+   */
+  static eliminarDefinitivo(id, idUsuarioSesion) {
+    return eliminarSinAsociados({
+      tabla: 'usuario',
+      llave: 'id_usuario',
+      id,
+      noEncontrado: 'Usuario no encontrado',
+      validar: async (db, usuario) => {
+        if (usuario.id_usuario === Number(idUsuarioSesion)) throw conflict('No puedes eliminar tu propio usuario.');
+        const otros = await db.query(
+          `SELECT r.nombre = 'Administrador' AS es_admin,
+                  (SELECT COUNT(*) FROM usuario u JOIN rol ra ON ra.id_rol = u.id_rol
+                   WHERE ra.nombre = 'Administrador' AND u.estado = 'Activo' AND u.id_usuario <> $1)::int AS otros_admins
+           FROM rol r WHERE r.id_rol = $2`,
+          [usuario.id_usuario, usuario.id_rol]
+        );
+        const { es_admin: esAdmin, otros_admins: otrosAdmins } = otros.rows[0] ?? {};
+        if (esAdmin && usuario.estado === 'Activo' && otrosAdmins === 0) {
+          throw conflict('No se puede eliminar el único Administrador activo.');
+        }
+      },
+      asociados: [
+        { sql: 'SELECT 1 FROM cliente WHERE id_usuario = $1', mensaje: 'Este usuario es la cuenta de un cliente; puedes inactivarlo.' },
+        { sql: 'SELECT 1 FROM pedido WHERE id_usuario = $1 UNION ALL SELECT 1 FROM venta WHERE id_usuario = $1', mensaje: 'Este usuario tiene pedidos o ventas registrados; puedes inactivarlo.' },
+        { sql: 'SELECT 1 FROM abono WHERE id_usuario_registra = $1 OR id_usuario_revisa = $1', mensaje: 'Este usuario registró o revisó abonos; puedes inactivarlo.' },
+        { sql: 'SELECT 1 FROM pedido_estado_historial WHERE id_usuario = $1', mensaje: 'Este usuario tiene cambios de estado de pedidos registrados; puedes inactivarlo.' },
+        { sql: 'SELECT 1 FROM compra WHERE id_usuario = $1 UNION ALL SELECT 1 FROM lote_produccion WHERE id_usuario_responsable = $1', mensaje: 'Este usuario tiene compras o producción registradas; puedes inactivarlo.' },
+        { sql: 'SELECT 1 FROM auditoria WHERE id_usuario = $1', mensaje: 'Este usuario tiene registros de auditoría; puedes inactivarlo.' },
+      ],
+      // Sus notificaciones se borran con él (ON DELETE CASCADE).
+    });
+  }
+
   static async delete(id) {
     const res = await query(
       `UPDATE usuario SET estado = 'Inactivo' WHERE id_usuario = $1 RETURNING id_usuario`,

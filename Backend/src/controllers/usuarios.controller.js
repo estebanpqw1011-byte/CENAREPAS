@@ -34,6 +34,14 @@ export class UsuariosController {
     } catch (e) { next(e); }
   }
 
+  /** DELETE /usuarios/:id/definitivo (usuarios:eliminar): borra solo sin registros asociados. */
+  static async eliminarDefinitivo(req, res, next) {
+    try {
+      await UsuariosService.eliminarDefinitivo(req.params.id, req.user.id_usuario);
+      return successResponse(res, null, 'Usuario eliminado');
+    } catch (e) { next(e); }
+  }
+
   static async delete(req, res, next) {
     try {
       const ok = await UsuariosService.delete(req.params.id);
