@@ -123,3 +123,22 @@ test('7. pedido inexistente → 404', async () => {
   const { status } = await api(token, 'GET', '/pedidos/999999/historial');
   assert.equal(status, 404);
 });
+
+test('8. GET /mi/pedidos/:id trae el historial del pedido del cliente, sin datos del personal', async () => {
+  // Solo lee: el cliente fijo de las pruebas de abonos ya tiene pedidos.
+  const cliente = await login('prueba.abonos@staging.test');
+  const [primero] = (await api(cliente.token, 'GET', '/mi/pedidos')).body.data;
+  assert.ok(primero, 'el cliente de prueba debe tener al menos un pedido');
+
+  const { status, body } = await api(cliente.token, 'GET', `/mi/pedidos/${primero.id_pedido}`);
+  assert.equal(status, 200);
+  const filas = body.data.historial;
+  assert.ok(Array.isArray(filas) && filas.length > 0);
+  assert.deepEqual(pasos(filas), pasos(await historial(primero.id_pedido)));
+  for (const h of filas) {
+    assert.deepEqual(
+      Object.keys(h).sort(),
+      ['estado_anterior', 'estado_nuevo', 'fecha_cambio', 'motivo', 'propio', 'reconstruido', 'rol_nombre']
+    );
+  }
+});

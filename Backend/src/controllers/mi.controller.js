@@ -26,6 +26,18 @@ export class MiController {
     try {
       const data = await PedidosService.getById(req.params.id, { idCliente: req.user.id_cliente });
       if (!data) return errorResponse(res, 'Pedido no encontrado', 404);
+      // Historial de estados: la misma fuente que GET /pedidos/:id/historial
+      // (pedido_estado_historial), sin nombre ni id del personal.
+      const historial = await PedidosService.historial(req.params.id, { idCliente: req.user.id_cliente });
+      data.historial = (historial || []).map((h) => ({
+        estado_anterior: h.estado_anterior,
+        estado_nuevo: h.estado_nuevo,
+        motivo: h.motivo,
+        fecha_cambio: h.fecha_cambio,
+        reconstruido: h.reconstruido,
+        rol_nombre: h.rol_nombre,
+        propio: h.id_usuario === req.user.id_usuario,
+      }));
       return successResponse(res, data);
     } catch (e) { next(e); }
   }

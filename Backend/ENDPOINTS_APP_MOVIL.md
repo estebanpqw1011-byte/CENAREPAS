@@ -81,7 +81,7 @@ comprobantes subidos por otro usuario (403).
 |---|---|---|
 | GET | `/mi/pedidos?estado=Pendiente` | HU-162 |
 | POST | `/mi/pedidos` | HU-158 a HU-161 |
-| GET | `/mi/pedidos/:id` | HU-163 (404 si no es suyo) |
+| GET | `/mi/pedidos/:id` | HU-163 (404 si no es suyo). **Modificado (vista del cliente en la web):** agrega `historial` (misma fuente que `GET /pedidos/:id/historial`, del más antiguo al más reciente) con `estado_anterior`, `estado_nuevo`, `motivo`, `fecha_cambio`, `reconstruido`, `rol_nombre` y `propio` (true si el cambio lo hizo el propio cliente); sin nombre ni id del personal. La app ignora el campo. |
 | POST | `/mi/pedidos/:id/anular` `{ motivo }` | HU-164: solo Pendiente y ≥ 24 h antes de la entrega |
 | GET | `/mi/creditos`, `/mi/creditos/:id` | HU-166 (incluye el historial de abonos) |
 | POST | `/mi/creditos/:id/abonos` `{ valor_abonado, medio_pago, comprobante_url? }` | HU-167: queda **En revisión** |

@@ -21,3 +21,9 @@ export const DIAS_MAXIMOS_ENTREGA = 60;
 /** Comprobantes de pago (CA-159-002): JPG, PNG o PDF de máximo 5 MB. */
 export const COMPROBANTE_MAX_BYTES = 5 * 1024 * 1024;
 export const COMPROBANTE_TIPOS = ['image/jpeg', 'image/png', 'application/pdf'];
+
+/** Estados del pedido (los de la base y la app). */
+export const ESTADOS_PEDIDO = ['Pendiente', 'En proceso', 'Entregado', 'Anulado'];
+
+/** Horas antes de las 00:00 del día de entrega en que el cliente aún puede anular (CA-164-001). */
+export const ANTICIPACION_ANULAR_HORAS = 24;

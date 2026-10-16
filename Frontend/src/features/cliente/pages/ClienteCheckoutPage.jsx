@@ -381,7 +381,13 @@ export default function ClienteCheckoutPage() {
 
             {medioPago === 'Transferencia' && (
               <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
-                <p className="text-sm font-semibold text-foreground">Transfiere el valor y adjunta el comprobante</p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-foreground">Transfiere el valor y adjunta el comprobante</p>
+                  {/* Hasta que CENAREPAS confirme sus cuentas reales (ver CUENTAS_TRANSFERENCIA). */}
+                  <span className="rounded-full bg-[#E8B23D]/20 px-2.5 py-0.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[#8A5A14] dark:text-[#E8B23D]">
+                    Cuentas de ejemplo
+                  </span>
+                </div>
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {CUENTAS_TRANSFERENCIA.map((c) => (
                     <li key={c.entidad} className="flex items-center justify-between gap-2 rounded-lg bg-card p-3">
