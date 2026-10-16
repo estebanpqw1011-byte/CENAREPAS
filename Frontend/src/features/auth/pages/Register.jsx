@@ -9,23 +9,9 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { getDefaultRouteForRole } from '../../../shared/config/permisos';
 import { toast } from '../../../shared/utils/toast.jsx';
+import { MUNICIPIOS_ENTREGA, TIPOS_DOCUMENTO } from '../../../shared/config/negocio';
 import cenarepasLogo from '../../../assets/cenarepas-icon.svg';
 import authRegisterBg from '../../../assets/auth/auth-register-bg.png';
-
-const TIPOS_DOCUMENTO = ['CC', 'CE', 'NIT', 'PP', 'TI'];
-
-const MUNICIPIOS_ENTREGA = [
-  'Medellín',
-  'Bello',
-  'Itagüí',
-  'Envigado',
-  'Sabaneta',
-  'La Estrella',
-  'Caldas',
-  'Copacabana',
-  'Girardota',
-  'Barbosa',
-];
 
 export default function Register() {
   const [nombre, setNombre] = useState('');
