@@ -57,7 +57,7 @@ export function useCompras() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar la compra');
+      toast.error(error?.data?.message || 'No se pudo guardar la compra');
     } finally {
       setIsSaving(false);
     }

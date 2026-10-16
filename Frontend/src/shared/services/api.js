@@ -2,6 +2,10 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
 const REQUEST_TIMEOUT_MS = 15000;
 
+if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
+  console.error('[API] VITE_API_URL no está definida en este build: las peticiones van a http://localhost:4000/api/v1 y fallarán. Defínela en Vercel y vuelve a desplegar.');
+}
+
 export const SERVER_BASE_URL = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
 
 export function getImageUrl(path) {
@@ -66,11 +70,17 @@ export async function apiRequest(endpoint, options = {}, fallbackFn = null) {
     return data?.data !== undefined ? data.data : data;
   } catch (err) {
     const isTimeout = err.name === 'AbortError';
+    // Sin status = fetch no obtuvo respuesta (servidor caído, URL o CORS mal configurados).
+    const sinRespuesta = isTimeout || !err.status;
     const finalErr = isTimeout
       ? Object.assign(new Error('Tiempo de espera agotado. Verifica tu conexión e inténtalo de nuevo.'), { status: 408 })
+      : sinRespuesta
+      ? Object.assign(new Error('No se pudo conectar con el servidor. Inténtalo de nuevo en unos minutos.'), { cause: err })
       : err;
 
-    if (fallbackFn) {
+    // Los datos de respaldo solo cubren la falta de conexión (sin respuesta del
+    // servidor). Un error HTTP (400, 401, 409, 500...) siempre llega al usuario.
+    if (fallbackFn && sinRespuesta) {
       console.warn(`[API Notice] Conexión a Backend ${endpoint} falló (${finalErr.message}). Utilizando datos de respaldo locales.`);
       return await fallbackFn();
     }

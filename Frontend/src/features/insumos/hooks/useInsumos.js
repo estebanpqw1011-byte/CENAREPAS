@@ -64,7 +64,7 @@ export function useInsumos() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar el insumo');
+      toast.error(error?.data?.message || 'No se pudo guardar el insumo');
     } finally {
       setIsSaving(false);
     }

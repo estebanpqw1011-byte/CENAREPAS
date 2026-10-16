@@ -62,7 +62,7 @@ export function useProveedores() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar el proveedor');
+      toast.error(error?.data?.message || 'No se pudo guardar el proveedor');
     } finally {
       setIsSaving(false);
     }

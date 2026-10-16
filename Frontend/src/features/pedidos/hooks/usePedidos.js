@@ -62,7 +62,7 @@ export function usePedidos() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar el pedido');
+      toast.error(error?.data?.message || 'No se pudo guardar el pedido');
     } finally {
       setIsSaving(false);
     }

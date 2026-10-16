@@ -75,7 +75,7 @@ export function useRoles() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar el rol');
+      toast.error(error?.data?.message || 'No se pudo guardar el rol');
     } finally {
       setIsSaving(false);
     }

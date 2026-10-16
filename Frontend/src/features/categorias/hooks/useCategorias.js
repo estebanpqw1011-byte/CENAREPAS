@@ -56,7 +56,7 @@ export function useCategorias() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar la categoría');
+      toast.error(error?.data?.message || 'No se pudo guardar la categoría');
     } finally {
       setIsSaving(false);
     }

@@ -60,7 +60,7 @@ export function useProduccion() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar el lote de producción');
+      toast.error(error?.data?.message || 'No se pudo guardar el lote de producción');
     } finally {
       setIsSaving(false);
     }

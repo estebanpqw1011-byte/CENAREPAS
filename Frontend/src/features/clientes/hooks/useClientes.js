@@ -67,7 +67,7 @@ export function useClientes() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar el cliente');
+      toast.error(error?.data?.message || 'No se pudo guardar el cliente');
     } finally {
       setIsSaving(false);
     }

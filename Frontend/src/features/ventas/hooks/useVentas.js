@@ -60,8 +60,8 @@ export function useVentas() {
         toast.success('Venta registrada');
       }
       setShowModal(false);
-    } catch {
-      toast.error('No se pudo guardar la venta');
+    } catch (error) {
+      toast.error(error?.data?.message || 'No se pudo guardar la venta');
     } finally {
       setIsSaving(false);
     }

@@ -61,7 +61,7 @@ export function useFichasTecnicas() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar la ficha técnica');
+      toast.error(error?.data?.message || 'No se pudo guardar la ficha técnica');
     } finally {
       setIsSaving(false);
     }

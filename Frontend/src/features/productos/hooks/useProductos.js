@@ -69,7 +69,7 @@ export function useProductos() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar el producto');
+      toast.error(error?.data?.message || 'No se pudo guardar el producto');
     } finally {
       setIsSaving(false);
     }
