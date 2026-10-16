@@ -10,6 +10,7 @@
     "start:staging": "node src/server.js --env=staging",
     "dev:staging": "nodemon src/server.js --env=staging",
     "test:staging": "node --test \"tests/**/*.test.js\"",
+    "migrar:local": "node scripts/migrar-local.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
