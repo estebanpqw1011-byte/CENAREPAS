@@ -162,14 +162,14 @@ export default function Register() {
               <span className="text-sm sm:text-base font-extrabold tracking-tight text-foreground">
                 CENAREPAS
               </span>
-              <span className="text-[8.5px] sm:text-[9px] font-bold tracking-[0.16em] uppercase text-[#C1502D] dark:text-[#E8B23D] mt-0.5">
+              <span className="text-[0.7rem] font-bold tracking-[0.16em] uppercase text-[#C1502D] dark:text-[#E8B23D] mt-0.5">
                 PORTAL CLIENTES
               </span>
             </div>
           </motion.a>
           
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#5A7A3A]/10 border border-[#5A7A3A]/20 dark:bg-[#5A7A3A]/25 dark:border-[#5A7A3A]/40 px-2.5 py-0.5 text-[10.5px] font-semibold text-[#5A7A3A] dark:text-[#AEC094]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#5A7A3A]/10 border border-[#5A7A3A]/20 dark:bg-[#5A7A3A]/25 dark:border-[#5A7A3A]/40 px-2.5 py-0.5 text-[0.7rem] font-semibold text-[#5A7A3A] dark:text-[#AEC094]">
               <span className="size-1.5 rounded-full bg-[#5A7A3A] dark:bg-[#E8B23D] animate-pulse" />
               Nuevo Cliente
             </span>
@@ -191,13 +191,13 @@ export default function Register() {
           {/* Eyebrow de Marca */}
           <div className="inline-flex items-center gap-1.5 rounded-full border border-[#C1502D]/20 bg-[#C1502D]/10 px-2.5 py-0.5 text-[#C1502D] mb-2.5">
             <Sparkles className="size-3 text-[#C1502D]" />
-            <span className="text-[10px] font-bold tracking-wider uppercase text-[#C1502D] dark:text-[#E8B23D]">
+            <span className="text-[0.7rem] font-bold tracking-wider uppercase text-[#C1502D] dark:text-[#E8B23D]">
               Crea tu Cuenta de Cliente
             </span>
           </div>
 
           <div className="mb-4">
-            <h1 className="text-2xl sm:text-[1.75rem] font-bold text-foreground tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight leading-tight">
               Regístrate en CENAREPAS
               <span 
                 className="block font-serif italic font-normal text-[#C1502D] dark:text-[#E8B23D] text-[0.96em] mt-0.5 tracking-normal"
@@ -206,7 +206,7 @@ export default function Register() {
                 y haz tus pedidos en línea
               </span>
             </h1>
-            <p className="text-muted-foreground text-xs sm:text-[13px] mt-1.5 leading-relaxed font-normal">
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1.5 leading-relaxed font-normal">
               Gestiona tus compras, haz seguimiento en tiempo real y consulta tus abonos y créditos.
             </p>
           </div>
@@ -217,7 +217,7 @@ export default function Register() {
             whileHover={{ scale: 1.01, y: -1 }}
             whileTap={{ scale: 0.99 }}
             type="button"
-            className="w-full h-11 flex items-center justify-center gap-2.5 bg-card dark:bg-[#111820] border border-border dark:border-[rgba(148,163,184,0.14)] text-foreground font-semibold text-xs sm:text-[13px] rounded-xl hover:bg-muted hover:border-[#C1502D]/40 transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D]"
+            className="w-full h-11 flex items-center justify-center gap-2.5 bg-card dark:bg-[#111820] border border-border dark:border-[rgba(148,163,184,0.14)] text-foreground font-semibold text-xs sm:text-sm rounded-xl hover:bg-muted hover:border-[#C1502D]/40 transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D]"
           >
             <svg className="size-4.5 shrink-0" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.58c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -231,7 +231,7 @@ export default function Register() {
           {/* Divisor */}
           <div className="flex items-center my-3.5">
             <div className="flex-grow border-t border-border"></div>
-            <span className="mx-3 text-[10.5px] text-muted-foreground font-medium uppercase tracking-wider">o completa el formulario</span>
+            <span className="mx-3 text-[0.7rem] text-muted-foreground font-medium uppercase tracking-wider">o completa el formulario</span>
             <div className="flex-grow border-t border-border"></div>
           </div>
 
@@ -251,7 +251,7 @@ export default function Register() {
 
             {/* 1. Nombre Completo */}
             <div>
-              <label htmlFor="reg-nombre" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+              <label htmlFor="reg-nombre" className="block text-xs font-bold text-foreground/90 mb-1">
                 Nombre Completo <span className="text-[#C1502D]">*</span>
               </label>
               <div className="relative">
@@ -271,7 +271,7 @@ export default function Register() {
                 />
               </div>
               {fieldErrors.nombre && (
-                <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                <p className="flex items-center gap-1 text-xs font-semibold text-[#C1502D] mt-1">
                   <AlertCircle className="size-3 shrink-0" /> {fieldErrors.nombre}
                 </p>
               )}
@@ -280,7 +280,7 @@ export default function Register() {
             {/* 2. Documento: Tipo y Número (2 columnas) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div>
-                <label htmlFor="reg-tipo-doc" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                <label htmlFor="reg-tipo-doc" className="block text-xs font-bold text-foreground/90 mb-1">
                   Tipo Doc. <span className="text-[#C1502D]">*</span>
                 </label>
                 <div className="relative">
@@ -299,7 +299,7 @@ export default function Register() {
               </div>
 
               <div className="sm:col-span-2">
-                <label htmlFor="reg-doc" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                <label htmlFor="reg-doc" className="block text-xs font-bold text-foreground/90 mb-1">
                   Número de Documento <span className="text-[#C1502D]">*</span>
                 </label>
                 <input
@@ -316,7 +316,7 @@ export default function Register() {
                   }`}
                 />
                 {fieldErrors.documento && (
-                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-[#C1502D] mt-1">
                     <AlertCircle className="size-3 shrink-0" /> {fieldErrors.documento}
                   </p>
                 )}
@@ -326,7 +326,7 @@ export default function Register() {
             {/* 3. Teléfono y Correo (2 columnas) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label htmlFor="reg-tel" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                <label htmlFor="reg-tel" className="block text-xs font-bold text-foreground/90 mb-1">
                   Teléfono / Celular <span className="text-[#C1502D]">*</span>
                 </label>
                 <div className="relative">
@@ -346,14 +346,14 @@ export default function Register() {
                   />
                 </div>
                 {fieldErrors.telefono && (
-                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-[#C1502D] mt-1">
                     <AlertCircle className="size-3 shrink-0" /> {fieldErrors.telefono}
                   </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="reg-correo" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                <label htmlFor="reg-correo" className="block text-xs font-bold text-foreground/90 mb-1">
                   Correo Electrónico <span className="text-[#C1502D]">*</span>
                 </label>
                 <div className="relative">
@@ -373,7 +373,7 @@ export default function Register() {
                   />
                 </div>
                 {fieldErrors.correo && (
-                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-[#C1502D] mt-1">
                     <AlertCircle className="size-3 shrink-0" /> {fieldErrors.correo}
                   </p>
                 )}
@@ -383,7 +383,7 @@ export default function Register() {
             {/* 4. Municipio y Barrio (2 columnas) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label htmlFor="reg-municipio" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                <label htmlFor="reg-municipio" className="block text-xs font-bold text-foreground/90 mb-1">
                   Municipio de Entrega <span className="text-[#C1502D]">*</span>
                 </label>
                 <div className="relative">
@@ -403,14 +403,14 @@ export default function Register() {
                   </select>
                 </div>
                 {fieldErrors.municipio && (
-                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-[#C1502D] mt-1">
                     <AlertCircle className="size-3 shrink-0" /> {fieldErrors.municipio}
                   </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="reg-barrio" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                <label htmlFor="reg-barrio" className="block text-xs font-bold text-foreground/90 mb-1">
                   Barrio <span className="text-[#C1502D]">*</span>
                 </label>
                 <div className="relative">
@@ -430,7 +430,7 @@ export default function Register() {
                   />
                 </div>
                 {fieldErrors.barrio && (
-                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-[#C1502D] mt-1">
                     <AlertCircle className="size-3 shrink-0" /> {fieldErrors.barrio}
                   </p>
                 )}
@@ -439,7 +439,7 @@ export default function Register() {
 
             {/* 5. Dirección Completa */}
             <div>
-              <label htmlFor="reg-direccion" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+              <label htmlFor="reg-direccion" className="block text-xs font-bold text-foreground/90 mb-1">
                 Dirección de Entrega <span className="text-[#C1502D]">*</span>
               </label>
               <input
@@ -456,7 +456,7 @@ export default function Register() {
                 }`}
               />
               {fieldErrors.direccion && (
-                <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                <p className="flex items-center gap-1 text-xs font-semibold text-[#C1502D] mt-1">
                   <AlertCircle className="size-3 shrink-0" /> {fieldErrors.direccion}
                 </p>
               )}
@@ -466,11 +466,11 @@ export default function Register() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="reg-pwd" className="text-[11.5px] font-bold text-foreground/90">
+                  <label htmlFor="reg-pwd" className="text-xs font-bold text-foreground/90">
                     Contraseña <span className="text-[#C1502D]">*</span>
                   </label>
                   {contrasena && (
-                    <span className={`text-[10px] font-bold ${passwordStrength.color}`}>
+                    <span className={`text-[0.7rem] font-bold ${passwordStrength.color}`}>
                       {passwordStrength.label}
                     </span>
                   )}
@@ -500,14 +500,14 @@ export default function Register() {
                   </button>
                 </div>
                 {fieldErrors.contrasena && (
-                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-[#C1502D] mt-1">
                     <AlertCircle className="size-3 shrink-0" /> {fieldErrors.contrasena}
                   </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="reg-confirm-pwd" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                <label htmlFor="reg-confirm-pwd" className="block text-xs font-bold text-foreground/90 mb-1">
                   Confirmar Contraseña <span className="text-[#C1502D]">*</span>
                 </label>
                 <div className="relative">
@@ -535,7 +535,7 @@ export default function Register() {
                   </button>
                 </div>
                 {fieldErrors.confirmarContrasena && (
-                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-[#C1502D] mt-1">
                     <AlertCircle className="size-3 shrink-0" /> {fieldErrors.confirmarContrasena}
                   </p>
                 )}
@@ -545,7 +545,7 @@ export default function Register() {
             {/* Aviso de Seguridad */}
             <div className="flex items-start gap-2 bg-[#5A7A3A]/10 dark:bg-[#5A7A3A]/20 border border-[#5A7A3A]/25 rounded-xl p-2.5">
               <ShieldCheck className="size-4 text-[#5A7A3A] dark:text-[#AEC094] shrink-0 mt-0.5" />
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 Tus datos de entrega y pedidos están protegidos bajo la política de privacidad de CENAREPAS.
               </p>
             </div>
@@ -563,12 +563,12 @@ export default function Register() {
                   }}
                   className="mt-0.5 size-3.5 shrink-0 rounded border-border text-[#C1502D] accent-[#C1502D] cursor-pointer"
                 />
-                <span className="text-[11.5px] text-muted-foreground leading-relaxed">
+                <span className="text-xs text-muted-foreground leading-relaxed">
                   Acepto los Términos de Servicio y la Política de Tratamiento de Datos de CENAREPAS. <span className="text-[#C1502D]">*</span>
                 </span>
               </label>
               {fieldErrors.terms && (
-                <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1 ml-6">
+                <p className="flex items-center gap-1 text-xs font-semibold text-[#C1502D] mt-1 ml-6">
                   <AlertCircle className="size-3 shrink-0" /> {fieldErrors.terms}
                 </p>
               )}
@@ -580,7 +580,7 @@ export default function Register() {
               whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={isLoading}
-              className="w-full h-11 mt-2 flex items-center justify-center gap-2 rounded-xl bg-[#C1502D] hover:bg-[#A84223] active:bg-[#8C341A] text-white font-bold text-xs sm:text-[13px] tracking-wide shadow-md transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full h-11 mt-2 flex items-center justify-center gap-2 rounded-xl bg-[#C1502D] hover:bg-[#A84223] active:bg-[#8C341A] text-white font-bold text-xs sm:text-sm tracking-wide shadow-md transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
@@ -610,7 +610,7 @@ export default function Register() {
         </div>
 
         {/* Footer */}
-        <div className="w-full max-w-[560px] mx-auto pt-3 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
+        <div className="w-full max-w-[560px] mx-auto pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
           <span>&copy; {new Date().getFullYear()} CENAREPAS</span>
           <span className="font-semibold text-foreground/80">Arepas Tradicionales y Rellenas</span>
         </div>
@@ -636,11 +636,11 @@ export default function Register() {
           <div className="flex items-center gap-3 backdrop-blur-md bg-[#161310]/60 border border-white/10 px-4 py-2 rounded-2xl shadow-lg">
             <Building2 className="size-5 text-[#efc200]" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-mono text-white/70 uppercase tracking-wider">Sabor Artesanal Paisa</span>
-              <span className="text-[11.5px] font-mono text-white font-semibold">Sedes Aranjuez & Bello Oriente</span>
+              <span className="text-[0.7rem] font-mono text-white/70 uppercase tracking-wider">Sabor Artesanal Paisa</span>
+              <span className="text-xs font-mono text-white font-semibold">Sedes Aranjuez & Bello Oriente</span>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#4ae176] bg-[#00b954]/20 border border-[#4ae176]/30 backdrop-blur-md px-3 py-1.5 rounded-xl">
+          <div className="flex items-center gap-1.5 text-xs font-mono text-[#4ae176] bg-[#00b954]/20 border border-[#4ae176]/30 backdrop-blur-md px-3 py-1.5 rounded-xl">
             <span className="w-2 h-2 rounded-full bg-[#4ae176] animate-pulse"></span>
             <span>Pedidos en línea</span>
           </div>
@@ -650,12 +650,12 @@ export default function Register() {
         <div className="relative z-10 my-auto py-6 space-y-4 max-w-xl">
           <div className="inline-flex items-center gap-2 mb-1">
             <span className="h-px w-8 bg-[#efc200]"></span>
-            <span className="text-[11px] font-mono tracking-widest uppercase text-[#efc200] font-bold">Autogestión de Clientes</span>
+            <span className="text-xs font-mono tracking-widest uppercase text-[#efc200] font-bold">Autogestión de Clientes</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl xl:text-[34px] font-bold tracking-tight text-white leading-tight">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
             Tus arepas favoritas, directas a tu mesa o negocio.
           </h2>
-          <p className="text-sm sm:text-[14.5px] text-[#e2bfb2] leading-relaxed max-w-lg font-light">
+          <p className="text-sm sm:text-base text-[#e2bfb2] leading-relaxed max-w-lg font-light">
             Explora nuestro catálogo de arepas tradicionales de maíz y deliciosas arepas rellenas. Pide en minutos con entrega programada y pagos transparentes.
           </p>
         </div>

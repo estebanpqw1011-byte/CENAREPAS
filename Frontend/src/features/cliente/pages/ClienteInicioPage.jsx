@@ -161,7 +161,7 @@ export default function ClienteInicioPage() {
             <div className="text-2xl font-extrabold text-foreground mt-1">
               {cargando ? '...' : pedidosActivos.length}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {pedidosActivos.length === 1 ? '1 pedido en preparación' : `${pedidosActivos.length} pedidos activos`}
             </p>
           </div>
@@ -179,7 +179,7 @@ export default function ClienteInicioPage() {
             <div className="text-2xl font-extrabold text-foreground mt-1">
               {cargando ? '...' : `$${Number(saldoPendiente).toLocaleString('es-CO')}`}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Total por liquidar en tus créditos
             </p>
           </div>
@@ -197,7 +197,7 @@ export default function ClienteInicioPage() {
             <div className="text-2xl font-extrabold text-foreground mt-1">
               Aranjuez
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Cobertura en todo el Valle de Aburrá
             </p>
           </div>
@@ -260,7 +260,7 @@ export default function ClienteInicioPage() {
                     <span className="font-extrabold text-sm text-foreground">
                       Pedido #{pedido.id_pedido}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
+                    <span className={`px-2 py-0.5 rounded-full text-[0.7rem] font-bold ${
                       pedido.estado === 'Pendiente'
                         ? 'bg-[#E8B23D]/20 text-[#8A5A14] dark:text-[#E8B23D]'
                         : 'bg-[#C1502D]/15 text-[#C1502D] dark:text-[#FFAAA0]'
@@ -279,7 +279,7 @@ export default function ClienteInicioPage() {
 
                 <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2 sm:pt-0 border-border">
                   <div className="text-right">
-                    <span className="text-[10px] text-muted-foreground block uppercase font-bold">Total</span>
+                    <span className="text-[0.7rem] text-muted-foreground block uppercase font-bold">Total</span>
                     <span className="text-sm font-extrabold text-[#C1502D] dark:text-[#E8B23D]">
                       ${Number(pedido.valor_total).toLocaleString('es-CO')}
                     </span>

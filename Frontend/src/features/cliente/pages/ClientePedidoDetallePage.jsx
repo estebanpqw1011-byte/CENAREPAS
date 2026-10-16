@@ -9,7 +9,7 @@ export default function ClientePedidoDetallePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E8B23D]/20 text-[#8A5A14] dark:text-[#E8B23D] text-[10.5px] font-bold mb-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E8B23D]/20 text-[#8A5A14] dark:text-[#E8B23D] text-[0.7rem] font-bold mb-2">
             <Construction className="size-3" />
             <span>EN CONSTRUCCIÓN · PARTE 4</span>
           </div>

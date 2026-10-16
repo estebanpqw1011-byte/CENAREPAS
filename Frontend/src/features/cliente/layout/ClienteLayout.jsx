@@ -13,11 +13,6 @@ import {
   Moon,
   LogOut,
   ChevronDown,
-  Sparkles,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  X,
 } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { useClienteCart } from '../context/ClienteCartContext';
@@ -102,11 +97,11 @@ export default function ClienteLayout({ onLogout }) {
                   <span className="text-base font-extrabold tracking-tight text-foreground">
                     CENAREPAS
                   </span>
-                  <span className="hidden sm:inline-flex text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-[#C1502D]/10 text-[#C1502D] dark:bg-[#E8B23D]/15 dark:text-[#E8B23D]">
+                  <span className="hidden sm:inline-flex text-[0.7rem] font-bold px-1.5 py-0.5 rounded-full bg-[#C1502D]/10 text-[#C1502D] dark:bg-[#E8B23D]/15 dark:text-[#E8B23D]">
                     CLIENTES
                   </span>
                 </div>
-                <span className="text-[9px] font-semibold tracking-wider text-muted-foreground uppercase">
+                <span className="text-[0.7rem] font-semibold tracking-wider text-muted-foreground uppercase">
                   Sabor Tradicional
                 </span>
               </div>
@@ -122,7 +117,7 @@ export default function ClienteLayout({ onLogout }) {
                     to={item.to}
                     end={item.end}
                     className={({ isActive }) =>
-                      `flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all duration-150 ${
+                      `flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 ${
                         isActive
                           ? 'bg-[#C1502D] text-white shadow-xs'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted/70'
@@ -155,7 +150,7 @@ export default function ClienteLayout({ onLogout }) {
             >
               <ShoppingCart className="size-4.5" />
               {totalCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[19px] h-[19px] px-1 flex items-center justify-center rounded-full bg-[#C1502D] text-white text-[10px] font-extrabold shadow-sm animate-in zoom-in-75">
+                <span className="absolute -top-1.5 -right-1.5 min-w-[19px] h-[19px] px-1 flex items-center justify-center rounded-full bg-[#C1502D] text-white text-[0.7rem] font-extrabold shadow-sm animate-in zoom-in-75">
                   {totalCount > 99 ? '99+' : totalCount}
                 </span>
               )}
@@ -179,7 +174,7 @@ export default function ClienteLayout({ onLogout }) {
               >
                 <Bell className="size-4.5" />
                 {noLeidas > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[19px] h-[19px] px-1 flex items-center justify-center rounded-full bg-[#E8B23D] text-[#2D2926] text-[10px] font-extrabold shadow-sm">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[19px] h-[19px] px-1 flex items-center justify-center rounded-full bg-[#E8B23D] text-[#2D2926] text-[0.7rem] font-extrabold shadow-sm">
                     {noLeidas}
                   </span>
                 )}
@@ -201,7 +196,7 @@ export default function ClienteLayout({ onLogout }) {
                           Notificaciones
                         </span>
                         {noLeidas > 0 && (
-                          <span className="px-1.5 py-0.2 rounded-full bg-[#E8B23D]/20 text-[#B87D0E] dark:text-[#E8B23D] text-[10px] font-bold">
+                          <span className="px-1.5 py-0.2 rounded-full bg-[#E8B23D]/20 text-[#B87D0E] dark:text-[#E8B23D] text-[0.7rem] font-bold">
                             {noLeidas} nuevas
                           </span>
                         )}
@@ -210,7 +205,7 @@ export default function ClienteLayout({ onLogout }) {
                         <button
                           type="button"
                           onClick={() => marcarTodasLeidas()}
-                          className="text-[11px] font-semibold text-[#C1502D] dark:text-[#E8B23D] hover:underline"
+                          className="text-xs font-semibold text-[#C1502D] dark:text-[#E8B23D] hover:underline"
                         >
                           Marcar leídas
                         </button>
@@ -235,13 +230,13 @@ export default function ClienteLayout({ onLogout }) {
                                 : 'border-[#C1502D]/20 bg-[#C1502D]/5 dark:bg-[#C1502D]/10 font-medium'
                             }`}
                           >
-                            <div className="flex items-center justify-between text-[11px] font-bold text-foreground mb-0.5">
+                            <div className="flex items-center justify-between text-xs font-bold text-foreground mb-0.5">
                               <span>{n.titulo}</span>
-                              <span className="text-[10px] font-normal text-muted-foreground">
+                              <span className="text-[0.7rem] font-normal text-muted-foreground">
                                 {n.fecha_creacion ? new Date(n.fecha_creacion).toLocaleDateString() : ''}
                               </span>
                             </div>
-                            <p className="text-[11.5px] text-muted-foreground leading-snug">
+                            <p className="text-xs text-muted-foreground leading-snug">
                               {n.mensaje}
                             </p>
                           </div>
@@ -296,7 +291,7 @@ export default function ClienteLayout({ onLogout }) {
                   <span className="text-xs font-bold text-foreground truncate">
                     {nombreUsuario.split(' ')[0]}
                   </span>
-                  <span className="text-[10px] text-muted-foreground truncate">
+                  <span className="text-[0.7rem] text-muted-foreground truncate">
                     Cliente
                   </span>
                 </div>
@@ -314,7 +309,7 @@ export default function ClienteLayout({ onLogout }) {
                   >
                     <div className="px-3 py-2 border-b border-border mb-1">
                       <p className="text-xs font-bold text-foreground truncate">{nombreUsuario}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{correoUsuario}</p>
+                      <p className="text-xs text-muted-foreground truncate">{correoUsuario}</p>
                     </div>
 
                     <NavLink
@@ -375,7 +370,7 @@ export default function ClienteLayout({ onLogout }) {
               }`}
             >
               <Icon className={`size-5 ${isActive ? 'scale-110' : ''}`} />
-              <span className="text-[10px] mt-0.5">{item.label}</span>
+              <span className="text-[0.7rem] mt-0.5">{item.label}</span>
             </NavLink>
           );
         })}
@@ -389,7 +384,7 @@ export default function ClienteLayout({ onLogout }) {
           }`}
         >
           <User className="size-5" />
-          <span className="text-[10px] mt-0.5">Perfil</span>
+          <span className="text-[0.7rem] mt-0.5">Perfil</span>
         </NavLink>
       </nav>
 
