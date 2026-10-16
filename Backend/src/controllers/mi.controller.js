@@ -111,6 +111,14 @@ export class MiController {
     } catch (e) { next(e); }
   }
 
+  /** POST /mi/perfil: crea la ficha del cliente desde el token ("Completa tu perfil"). */
+  static async completarPerfil(req, res, next) {
+    try {
+      const data = await PerfilService.completar(req.user, req.body || {});
+      return successResponse(res, data, 'Perfil completado', 201);
+    } catch (e) { next(e); }
+  }
+
   static async actualizarPerfil(req, res, next) {
     try {
       const data = await PerfilService.actualizar(req.user.id_usuario, req.body || {});

@@ -87,7 +87,7 @@ function AdminRouteGuard({ children }) {
 
 // Guardián para el portal del cliente: bloquea empleados y usuarios sin sesión
 function ClienteRouteGuard({ onLogout }) {
-  const { isAuthenticated, isCliente, rolName } = getSessionInfo();
+  const { isAuthenticated, isCliente, rolName, user } = getSessionInfo();
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />;
@@ -101,7 +101,8 @@ function ClienteRouteGuard({ onLogout }) {
 
   return (
     <ClienteCartProvider>
-      <ClienteNotificationProvider>
+      {/* Sin ficha (fila en cliente) /mi/notificaciones responde 403: no se consulta. */}
+      <ClienteNotificationProvider activo={Boolean(user?.id_cliente)}>
         <ClienteLayout onLogout={onLogout} />
       </ClienteNotificationProvider>
     </ClienteCartProvider>

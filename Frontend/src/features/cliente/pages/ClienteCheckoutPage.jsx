@@ -1,14 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, Copy, FileCheck2, Loader2,
-  MapPin, ShieldAlert, ShoppingCart, Store, Upload, X,
+  ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, Copy, Loader2,
+  MapPin, ShieldAlert, ShoppingCart, Store,
 } from 'lucide-react';
 import { useClienteCart } from '../context/ClienteCartContext';
-import { crearPedidoCliente, getPerfilCliente, subirComprobante } from '../services/checkoutService';
+import { crearPedidoCliente, getPerfilCliente } from '../services/checkoutService';
+import ComprobanteUploader from '../components/ComprobanteUploader';
+import { tieneFicha } from '../utils/sesion';
 import {
   CUENTAS_TRANSFERENCIA, MEDIOS_PAGO, armarCuerpoPedido, fechaMaximaISO, hoyISO,
-  validarAbono, validarComprobante, validarEntrega,
+  validarAbono, validarEntrega,
 } from '../utils/checkout';
 import { formatCOP, precioDe } from '../utils/catalogo';
 import { MUNICIPIOS_ENTREGA, SEDE_PEDIDOS_CLIENTE } from '../../../shared/config/negocio';
@@ -137,13 +139,7 @@ function PedidoConfirmado({ pedido }) {
 
 export default function ClienteCheckoutPage() {
   const { items, totalAmount, totalCount, clearCart } = useClienteCart();
-  const tieneFicha = (() => {
-    try {
-      return Boolean(JSON.parse(localStorage.getItem('user') || '{}').id_cliente);
-    } catch {
-      return false;
-    }
-  })();
+  const conFicha = tieneFicha();
 
   const [entrega, setEntrega] = useState({ municipio: '', direccion: '', barrio: '', complemento: '', indicaciones: '' });
   const [fechaEntrega, setFechaEntrega] = useState('');
@@ -156,11 +152,10 @@ export default function ClienteCheckoutPage() {
   const [enviando, setEnviando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState('');
   const [confirmado, setConfirmado] = useState(null);
-  const archivoRef = useRef(null);
 
   // Precarga la dirección del perfil, como la app (solo los campos vacíos).
   useEffect(() => {
-    if (!tieneFicha) return;
+    if (!conFicha) return;
     let activo = true;
     getPerfilCliente()
       .then((perfil) => {
@@ -178,7 +173,7 @@ export default function ClienteCheckoutPage() {
     return () => {
       activo = false;
     };
-  }, [tieneFicha]);
+  }, [conFicha]);
 
   const valorAbono = conAbono ? Number(abonoTexto.replace(/\D/g, '')) || 0 : 0;
   const errorAbono = conAbono ? validarAbono(valorAbono, totalAmount) : null;
@@ -186,28 +181,6 @@ export default function ClienteCheckoutPage() {
   const cambiarEntrega = (campo) => (e) => {
     setEntrega((actual) => ({ ...actual, [campo]: e.target.value }));
     if (errores[campo]) setErrores((actual) => ({ ...actual, [campo]: undefined }));
-  };
-
-  const elegirComprobante = async (e) => {
-    const archivo = e.target.files?.[0];
-    e.target.value = '';
-    if (!archivo) return;
-    const problema = validarComprobante(archivo);
-    if (problema) {
-      setErrores((actual) => ({ ...actual, comprobante: problema }));
-      return;
-    }
-    setSubiendo(true);
-    setErrores((actual) => ({ ...actual, comprobante: undefined }));
-    try {
-      const subido = await subirComprobante(archivo);
-      setComprobante({ url: subido.url, nombre: subido.nombre_original || archivo.name });
-      toast.success('Comprobante adjuntado');
-    } catch (err) {
-      setErrores((actual) => ({ ...actual, comprobante: err?.data?.message || err?.message || 'No se pudo subir el comprobante' }));
-    } finally {
-      setSubiendo(false);
-    }
   };
 
   const copiar = async (texto, entidad) => {
@@ -251,7 +224,7 @@ export default function ClienteCheckoutPage() {
 
   if (confirmado) return <PedidoConfirmado pedido={confirmado} />;
 
-  if (!tieneFicha) {
+  if (!conFicha) {
     return (
       <div className="mx-auto max-w-xl rounded-3xl border border-[#E8B23D]/40 bg-[#E8B23D]/10 p-6 text-center">
         <ShieldAlert className="mx-auto mb-3 size-8 text-[#8A5A14] dark:text-[#E8B23D]" />
@@ -408,44 +381,14 @@ export default function ClienteCheckoutPage() {
                   ))}
                 </ul>
 
-                <input
-                  ref={archivoRef}
+                <ComprobanteUploader
                   id="comprobante"
-                  type="file"
-                  accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf"
-                  onChange={elegirComprobante}
-                  className="sr-only"
-                  aria-describedby={errores.comprobante ? 'comprobante-error' : undefined}
+                  valor={comprobante}
+                  onChange={setComprobante}
+                  error={errores.comprobante}
+                  onError={(mensaje) => setErrores((actual) => ({ ...actual, comprobante: mensaje }))}
+                  onSubiendo={setSubiendo}
                 />
-                {comprobante ? (
-                  <div className="flex items-center justify-between gap-3 rounded-lg border border-[#5A7A3A]/30 bg-[#5A7A3A]/10 p-3">
-                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-foreground">
-                      <FileCheck2 className="size-4 shrink-0 text-[#5A7A3A] dark:text-[#AEC094]" />
-                      <span className="truncate">{comprobante.nombre}</span>
-                    </span>
-                    <span className="flex shrink-0 gap-1">
-                      <button type="button" onClick={() => archivoRef.current?.click()} className="rounded-lg px-2 py-1 text-xs font-bold text-foreground hover:bg-muted cursor-pointer">
-                        Cambiar
-                      </button>
-                      <button type="button" onClick={() => setComprobante(null)} aria-label="Quitar comprobante" className="rounded-lg p-1 text-muted-foreground hover:bg-muted cursor-pointer">
-                        <X className="size-4" />
-                      </button>
-                    </span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => archivoRef.current?.click()}
-                    disabled={subiendo}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#C1502D]/50 bg-card px-4 py-3 text-sm font-semibold text-[#C1502D] transition-colors hover:bg-[#C1502D]/5 disabled:opacity-60 dark:text-[#E8B23D] cursor-pointer"
-                  >
-                    {subiendo ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-                    {subiendo ? 'Subiendo comprobante…' : 'Adjuntar comprobante (JPG, PNG o PDF, máx. 5 MB)'}
-                  </button>
-                )}
-                {errores.comprobante && (
-                  <p id="comprobante-error" className="text-xs font-semibold text-[#C1502D] dark:text-[#FFAAA0]">{errores.comprobante}</p>
-                )}
               </div>
             )}
           </Seccion>

@@ -2,7 +2,8 @@ import bcrypt from 'bcryptjs';
 import { pool, query } from '../config/db.js';
 import { generateToken } from '../utils/jwt.js';
 import { HttpError, badRequest, conflict } from '../utils/httpError.js';
-import { CONTRASENA_MIN, MUNICIPIOS_ENTREGA, TIPOS_DOCUMENTO } from '../config/negocio.js';
+import { CONTRASENA_MIN } from '../config/negocio.js';
+import { validarFichaCliente } from '../utils/fichaCliente.js';
 
 const SALT_ROUNDS = 10;
 const CORREO_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -76,25 +77,12 @@ export class AuthService {
    * ignora cualquier id_rol recibido y crea usuario + cliente en una transacción.
    */
   static async registrarCliente(datos) {
-    const nombre = texto(datos.nombre);
-    const tipoDocumento = texto(datos.tipo_documento).toUpperCase();
-    const documento = texto(datos.documento);
-    const telefono = texto(datos.telefono);
+    const { valores, errores } = validarFichaCliente(datos);
+    const { nombre, tipoDocumento, documento, telefono, municipio, barrio, direccion } = valores;
     const correo = texto(datos.correo).toLowerCase();
-    const municipio = texto(datos.municipio);
-    const barrio = texto(datos.barrio);
-    const direccion = texto(datos.direccion);
     const contrasena = typeof datos.contrasena === 'string' ? datos.contrasena : '';
 
-    const errores = {};
-    if (nombre.length < 3) errores.nombre = 'Ingresa tu nombre completo';
-    if (!TIPOS_DOCUMENTO.includes(tipoDocumento)) errores.tipo_documento = 'Selecciona un tipo de documento válido';
-    if (!/^[0-9A-Za-z.-]{5,20}$/.test(documento)) errores.documento = 'Ingresa un número de documento válido';
-    if (!/^[0-9+ ]{7,15}$/.test(telefono)) errores.telefono = 'Ingresa un teléfono válido';
     if (!CORREO_REGEX.test(correo)) errores.correo = 'Ingresa un correo válido';
-    if (!MUNICIPIOS_ENTREGA.includes(municipio)) errores.municipio = 'Selecciona un municipio del Área Metropolitana';
-    if (!barrio) errores.barrio = 'Ingresa tu barrio';
-    if (direccion.length < 5) errores.direccion = 'Ingresa tu dirección';
     if (contrasena.length < CONTRASENA_MIN) errores.contrasena = `La contraseña debe tener al menos ${CONTRASENA_MIN} caracteres`;
     if (Object.keys(errores).length > 0) {
       throw badRequest('Revisa los datos del registro', errores);

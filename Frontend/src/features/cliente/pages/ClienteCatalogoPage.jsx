@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Search, X, ShoppingBag, ShoppingCart, ArrowRight, Plus } from 'lucide-react';
+import { Search, X, ShoppingBag, ShoppingCart, ArrowRight, Plus, ShieldAlert } from 'lucide-react';
 import { useClienteCart } from '../context/ClienteCartContext';
 import { getCategoriasCatalogo, getProductosCatalogo } from '../services/catalogoService';
 import {
@@ -13,12 +13,13 @@ import {
 } from '../utils/catalogo';
 import ProductoImagen from '../components/ProductoImagen';
 import CantidadStepper from '../components/CantidadStepper';
+import { tieneFicha } from '../utils/sesion';
 import ErrorBanner from '../../../shared/components/ErrorBanner';
 import EmptyState from '../../../shared/components/EmptyState';
 import { Skeleton } from '../../../shared/components/Skeleton';
 import { toast } from '../../../shared/utils/toast.jsx';
 
-function TarjetaProducto({ producto }) {
+function TarjetaProducto({ producto, puedePedir }) {
   const { cantidadDe, addItem, updateQuantity } = useClienteCart();
   const cantidad = cantidadDe(producto.id_producto);
   const stock = stockDe(producto);
@@ -64,7 +65,7 @@ function TarjetaProducto({ producto }) {
 
           {!disponible ? (
             <span className="text-xs font-semibold text-muted-foreground">No disponible</span>
-          ) : cantidad > 0 ? (
+          ) : !puedePedir ? null : cantidad > 0 ? (
             <CantidadStepper
               cantidad={cantidad}
               max={stock}
@@ -114,6 +115,8 @@ export default function ClienteCatalogoPage() {
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [categoriaId, setCategoriaId] = useState(null);
+  // Sin ficha (fila en cliente) solo puede mirar el catálogo.
+  const puedePedir = tieneFicha();
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -176,6 +179,18 @@ export default function ClienteCatalogoPage() {
           Arepas recién hechas y complementos para tu pedido. Despachamos desde la sede Aranjuez.
         </p>
       </header>
+
+      {!puedePedir && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-[#E8B23D]/40 bg-[#E8B23D]/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-start gap-2.5 text-sm text-foreground">
+            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-[#8A5A14] dark:text-[#E8B23D]" />
+            Completa tu perfil para poder hacer pedidos.
+          </p>
+          <NavLink to="/cliente/perfil" className="shrink-0 rounded-xl bg-[#C1502D] px-4 py-2 text-center text-sm font-bold text-white hover:bg-[#A84223]">
+            Completar perfil
+          </NavLink>
+        </div>
+      )}
 
       <div className="space-y-3">
         <div className="relative max-w-xl">
@@ -243,12 +258,12 @@ export default function ClienteCatalogoPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visibles.map((p) => (
-            <TarjetaProducto key={p.id_producto} producto={p} />
+            <TarjetaProducto key={p.id_producto} producto={p} puedePedir={puedePedir} />
           ))}
         </div>
       )}
 
-      {totalCount > 0 && (
+      {puedePedir && totalCount > 0 && (
         <div className="sticky bottom-20 z-30 md:bottom-4">
           <NavLink
             to="/cliente/carrito"

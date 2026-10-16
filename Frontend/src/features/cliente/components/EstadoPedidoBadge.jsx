@@ -9,6 +9,9 @@ const ESTILOS = {
   Aprobado: 'bg-[#5A7A3A]/15 text-[#5A7A3A] dark:text-[#AEC094]',
   'En revisión': 'bg-[#E8B23D]/20 text-[#8A5A14] dark:text-[#E8B23D]',
   Rechazado: 'bg-destructive/10 text-destructive',
+  // Estados de los créditos
+  Activo: 'bg-[#E8B23D]/20 text-[#8A5A14] dark:text-[#E8B23D]',
+  Pagado: 'bg-[#5A7A3A]/15 text-[#5A7A3A] dark:text-[#AEC094]',
 };
 
 export default function EstadoPedidoBadge({ estado }) {

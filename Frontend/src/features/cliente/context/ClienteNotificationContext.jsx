@@ -3,28 +3,38 @@ import { api } from '../../../shared/services/api';
 
 const ClienteNotificationContext = createContext(null);
 
-export function ClienteNotificationProvider({ children }) {
+/**
+ * Notificaciones del cliente (HU-168, HU-169). Con activo=false (usuario sin
+ * ficha: /mi/notificaciones respondería 403) no consulta nada.
+ */
+export function ClienteNotificationProvider({ children, activo = true }) {
   const [notificaciones, setNotificaciones] = useState([]);
   const [noLeidas, setNoLeidas] = useState(0);
   const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
 
   const cargarNotificaciones = useCallback(async () => {
+    if (!activo) return;
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
       setCargando(true);
       const data = (await api.get('/mi/notificaciones')) || {};
       setNotificaciones(data.notificaciones || []);
       setNoLeidas(data.no_leidas || 0);
+      setError('');
     } catch (e) {
-      // Es un sondeo de fondo: no interrumpe la pantalla, pero queda en la consola.
-      console.warn('[Notificaciones] No se pudieron cargar:', e?.message);
+      // El sondeo no interrumpe la pantalla; la página de notificaciones muestra el error.
+      setError(e?.message || 'No se pudieron cargar tus notificaciones.');
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [activo]);
 
   useEffect(() => {
+    if (!activo) {
+      setNotificaciones([]);
+      setNoLeidas(0);
+      return undefined;
+    }
     cargarNotificaciones();
     // Sondeo suave cada 45 segundos si la pestaña está activa
     const timer = setInterval(() => {
@@ -33,7 +43,7 @@ export function ClienteNotificationProvider({ children }) {
       }
     }, 45000);
     return () => clearInterval(timer);
-  }, [cargarNotificaciones]);
+  }, [activo, cargarNotificaciones]);
 
   const marcarLeida = async (id_notificacion) => {
     try {
@@ -42,8 +52,10 @@ export function ClienteNotificationProvider({ children }) {
         prev.map((n) => (n.id_notificacion === id_notificacion ? { ...n, leida: true } : n))
       );
       setNoLeidas((prev) => Math.max(0, prev - 1));
+      return true;
     } catch (e) {
-      console.error('Error al marcar notificación como leída:', e);
+      setError(e?.message || 'No se pudo marcar la notificación como leída.');
+      return false;
     }
   };
 
@@ -52,8 +64,10 @@ export function ClienteNotificationProvider({ children }) {
       await api.patch('/mi/notificaciones/leidas');
       setNotificaciones((prev) => prev.map((n) => ({ ...n, leida: true })));
       setNoLeidas(0);
+      return true;
     } catch (e) {
-      console.error('Error al marcar todas las notificaciones como leídas:', e);
+      setError(e?.message || 'No se pudieron marcar las notificaciones como leídas.');
+      return false;
     }
   };
 
@@ -63,6 +77,7 @@ export function ClienteNotificationProvider({ children }) {
         notificaciones,
         noLeidas,
         cargando,
+        error,
         marcarLeida,
         marcarTodasLeidas,
         recargar: cargarNotificaciones,

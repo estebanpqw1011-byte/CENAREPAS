@@ -89,6 +89,8 @@ comprobantes subidos por otro usuario (403).
 | PATCH | `/mi/notificaciones/:id/leida`, `/mi/notificaciones/leidas` | HU-169 |
 | GET / PUT | `/mi/perfil` | HU-170: nombre, teléfono, dirección, municipio y barrio; el documento no se edita |
 | PUT | `/mi/contrasena` `{ contrasena_actual, contrasena_nueva }` | HU-170 |
+| POST | `/mi/perfil` `{ nombre, tipo_documento, documento, telefono, municipio, barrio, direccion }` | **Nuevo (vista del cliente en la web): "Completa tu perfil".** Crea la ficha (fila en `cliente`) de un usuario Cliente que no la tiene; el usuario y el correo salen del token. 201 con el perfil; 400 con error por campo; 409 "Tu perfil ya está completo" o documento/correo ya registrados en otro cliente. |
+| * | `/mi/*` sin ficha | **Modificado:** si el usuario Cliente no tiene fila en `cliente`, todo `/mi/*` responde 403 "Completa tu perfil", salvo `GET /mi/perfil` (404) y `POST /mi/perfil`. |
 
 ```http
 POST /mi/pedidos

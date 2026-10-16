@@ -10,11 +10,13 @@ router.use(authenticate, requireRol('Cliente'));
 
 // Sin fila en cliente (id_cliente nulo) no hay datos propios, y los servicios
 // toman un id_cliente nulo como "sin filtro": devolverían los de todos los
-// clientes. Por eso se corta aquí todo /mi/* salvo GET /mi/perfil.
+// clientes. Por eso se corta aquí todo /mi/* salvo GET /mi/perfil y
+// POST /mi/perfil, que crea la ficha desde el token.
 const requireFichaCliente = (req, res, next) =>
   req.user.id_cliente ? next() : errorResponse(res, 'Completa tu perfil', 403);
 
 router.get('/perfil', MiController.perfil);
+router.post('/perfil', MiController.completarPerfil);
 
 router.use(requireFichaCliente);
 

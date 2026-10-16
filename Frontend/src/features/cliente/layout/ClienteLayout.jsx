@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
@@ -17,7 +17,11 @@ import {
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { useClienteCart } from '../context/ClienteCartContext';
 import { useClienteNotifications } from '../context/ClienteNotificationContext';
+import { alCambiarUsuario, leerUsuario } from '../utils/sesion';
 import cenarepasLogo from '../../../assets/cenarepas-icon.svg';
+
+// Sin ficha (fila en cliente) solo se puede ver el catálogo y "Completa tu perfil".
+const RUTAS_SIN_FICHA = ['/cliente/catalogo', '/cliente/perfil'];
 
 export default function ClienteLayout({ onLogout }) {
   const { theme, toggleTheme } = useTheme();
@@ -33,14 +37,10 @@ export default function ClienteLayout({ onLogout }) {
   const userDropdownRef = useRef(null);
   const notifDropdownRef = useRef(null);
 
-  // Leer usuario actual de localStorage
-  const user = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('user') || '{}');
-    } catch {
-      return {};
-    }
-  })();
+  // Usuario de la sesión; se relee si cambia (perfil completado o editado).
+  const [user, setUser] = useState(leerUsuario);
+  useEffect(() => alCambiarUsuario(() => setUser(leerUsuario())), []);
+  const conFicha = Boolean(user.id_cliente);
 
   const nombreUsuario = user.nombre || 'Cliente CENAREPAS';
   const correoUsuario = user.correo || '';
@@ -72,7 +72,11 @@ export default function ClienteLayout({ onLogout }) {
     { to: '/cliente/catalogo', label: 'Catálogo', icon: ShoppingBag },
     { to: '/cliente/pedidos', label: 'Mis Pedidos', icon: Package },
     { to: '/cliente/creditos', label: 'Mis Créditos', icon: CreditCard },
-  ];
+  ].filter((l) => conFicha || RUTAS_SIN_FICHA.includes(l.to));
+
+  if (!conFicha && !RUTAS_SIN_FICHA.includes(location.pathname)) {
+    return <Navigate to="/cliente/perfil" replace />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-[#C1502D]/15 selection:text-[#C1502D] transition-colors duration-200">
@@ -135,6 +139,7 @@ export default function ClienteLayout({ onLogout }) {
           {/* Utilidades de la derecha */}
           <div className="flex items-center gap-2 sm:gap-3">
             
+            {conFicha && (<>
             {/* Botón Carrito */}
             <NavLink
               to="/cliente/carrito"
@@ -223,6 +228,10 @@ export default function ClienteLayout({ onLogout }) {
                             key={n.id_notificacion}
                             onClick={() => {
                               if (!n.leida) marcarLeida(n.id_notificacion);
+                              if (n.id_pedido) {
+                                setNotifDropdownOpen(false);
+                                navigate(`/cliente/pedidos/${n.id_pedido}`);
+                              }
                             }}
                             className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-colors ${
                               n.leida
@@ -257,6 +266,8 @@ export default function ClienteLayout({ onLogout }) {
                 )}
               </AnimatePresence>
             </div>
+
+            </>)}
 
             {/* Toggle de Modo Claro/Oscuro */}
             <button
