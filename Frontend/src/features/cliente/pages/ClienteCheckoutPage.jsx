@@ -5,7 +5,9 @@ import {
   MapPin, ShieldAlert, ShoppingCart, Store,
 } from 'lucide-react';
 import { useClienteCart } from '../context/ClienteCartContext';
-import { crearPedidoCliente, getPerfilCliente } from '../services/checkoutService';
+import { crearPedidoCliente } from '../services/checkoutService';
+import { getMiPerfil } from '../services/cuentaService';
+import { useClienteNotifications } from '../context/ClienteNotificationContext';
 import ComprobanteUploader from '../components/ComprobanteUploader';
 import { tieneFicha } from '../utils/sesion';
 import {
@@ -139,6 +141,8 @@ function PedidoConfirmado({ pedido }) {
 
 export default function ClienteCheckoutPage() {
   const { items, totalAmount, totalCount, clearCart } = useClienteCart();
+  // El backend crea la notificación "Recibimos tu pedido": se refresca el contador.
+  const { recargar: recargarNotificaciones } = useClienteNotifications();
   const conFicha = tieneFicha();
 
   const [entrega, setEntrega] = useState({ municipio: '', direccion: '', barrio: '', complemento: '', indicaciones: '' });
@@ -157,7 +161,7 @@ export default function ClienteCheckoutPage() {
   useEffect(() => {
     if (!conFicha) return;
     let activo = true;
-    getPerfilCliente()
+    getMiPerfil()
       .then((perfil) => {
         if (!activo || !perfil) return;
         setEntrega((actual) => ({
@@ -210,6 +214,7 @@ export default function ClienteCheckoutPage() {
       );
       clearCart();
       setConfirmado(pedido);
+      recargarNotificaciones();
       window.scrollTo({ top: 0, behavior: 'smooth' });
       toast.success(`Pedido #${pedido.id_pedido} registrado`);
     } catch (err) {

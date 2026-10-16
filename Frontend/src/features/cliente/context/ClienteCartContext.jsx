@@ -1,18 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { precioDe, stockDe } from '../utils/catalogo';
+import { leerUsuario } from '../utils/sesion';
 
 const ClienteCartContext = createContext(null);
 
 // Un carrito por usuario: con una clave única, otro cliente que inicie sesión
 // en el mismo navegador heredaría el carrito anterior.
-const storageKeyDelUsuario = () => {
-  try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    return `cenarepas_cliente_cart_${user.id_usuario || 'anonimo'}`;
-  } catch {
-    return 'cenarepas_cliente_cart_anonimo';
-  }
-};
+const storageKeyDelUsuario = () => `cenarepas_cliente_cart_${leerUsuario().id_usuario || 'anonimo'}`;
 
 export function ClienteCartProvider({ children }) {
   const [STORAGE_KEY] = useState(storageKeyDelUsuario);

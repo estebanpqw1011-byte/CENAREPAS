@@ -6,6 +6,7 @@ import { fechaCorta, fechaHora, motivoNoAnulable, resumenPagos } from '../utils/
 import { formatCOP } from '../utils/catalogo';
 import EstadoPedidoBadge from '../components/EstadoPedidoBadge';
 import ProductoImagen from '../components/ProductoImagen';
+import { useClienteNotifications } from '../context/ClienteNotificationContext';
 import ErrorBanner from '../../../shared/components/ErrorBanner';
 import { Skeleton } from '../../../shared/components/Skeleton';
 import { toast } from '../../../shared/utils/toast.jsx';
@@ -101,6 +102,7 @@ export default function ClientePedidoDetallePage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [anulando, setAnulando] = useState(false);
+  const { recargar: recargarNotificaciones } = useClienteNotifications();
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -301,6 +303,7 @@ export default function ClientePedidoDetallePage() {
           onAnulado={() => {
             setAnulando(false);
             cargar();
+            recargarNotificaciones();
           }}
         />
       )}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
   ShoppingBag,
   Package,
@@ -12,46 +11,33 @@ import {
   Truck,
   Sparkles,
   ChevronRight,
-  ShieldAlert,
 } from 'lucide-react';
-import { api } from '../../../shared/services/api';
+import { getMisPedidos } from '../services/pedidosService';
+import { getMisCreditos } from '../services/cuentaService';
+import { leerUsuario } from '../utils/sesion';
 
 export default function ClienteInicioPage() {
   const [pedidosActivos, setPedidosActivos] = useState([]);
   const [saldoPendiente, setSaldoPendiente] = useState(0);
-  const [perfilCompleto, setPerfilCompleto] = useState(true);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState('');
 
-  const user = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('user') || '{}');
-    } catch {
-      return {};
-    }
-  })();
+  const user = leerUsuario();
 
   const nombreUsuario = user.nombre || 'Cliente';
 
   useEffect(() => {
     let montado = true;
     async function cargarDatosInicio() {
-      // Sin fila en cliente no hay pedidos ni créditos que pedir: además,
-      // /mi/pedidos y /mi/creditos no filtran si el id_cliente es nulo.
-      if (!user.id_cliente) {
-        if (montado) {
-          setPerfilCompleto(false);
-          setCargando(false);
-        }
-        return;
-      }
+      // Sin ficha el layout ya redirige a "Completa tu perfil" (y /mi/* responde 403).
+      if (!user.id_cliente) return;
 
       try {
         setCargando(true);
         setErrorCarga('');
         const [listado, creditos] = await Promise.all([
-          api.get('/mi/pedidos'),
-          api.get('/mi/creditos'),
+          getMisPedidos(),
+          getMisCreditos(),
         ]);
 
         // Pedidos activos: Pendiente o En proceso (estados reales de la base)
@@ -76,35 +62,6 @@ export default function ClienteInicioPage() {
   return (
     <div className="space-y-6">
       
-      {/* Banner de "Completa tu perfil" si no tiene cliente asociado */}
-      {!perfilCompleto && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-2xl border border-[#E8B23D]/40 bg-[#E8B23D]/10 text-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
-        >
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-[#E8B23D]/20 text-[#8A5A14] dark:text-[#E8B23D] shrink-0">
-              <ShieldAlert className="size-5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-foreground">
-                Completa tu información de entrega
-              </h4>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                Para poder despachar tus pedidos, necesitamos tu número de documento, dirección y barrio en el Área Metropolitana.
-              </p>
-            </div>
-          </div>
-          <NavLink
-            to="/cliente/perfil"
-            className="shrink-0 px-4 py-2 rounded-xl bg-[#C1502D] hover:bg-[#A84223] text-white text-xs font-bold transition-all shadow-xs"
-          >
-            Completar perfil
-          </NavLink>
-        </motion.div>
-      )}
-
       {errorCarga && (
         <div role="alert" className="p-4 rounded-2xl border border-destructive/30 bg-destructive/10 text-xs sm:text-sm text-destructive flex items-start gap-2">
           <AlertCircle className="size-4 shrink-0 mt-0.5" />
@@ -162,7 +119,7 @@ export default function ClienteInicioPage() {
               {cargando ? '...' : pedidosActivos.length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {pedidosActivos.length === 1 ? '1 pedido en preparación' : `${pedidosActivos.length} pedidos activos`}
+              {pedidosActivos.length === 1 ? '1 pedido en curso' : `${pedidosActivos.length} pedidos en curso`}
             </p>
           </div>
           <div className="p-3.5 rounded-2xl bg-[#C1502D]/10 text-[#C1502D] dark:bg-[#E8B23D]/15 dark:text-[#E8B23D]">
@@ -273,7 +230,7 @@ export default function ClienteInicioPage() {
                     <span className="font-semibold text-foreground">
                       {pedido.fecha_entrega ? new Date(pedido.fecha_entrega).toLocaleDateString('es-CO') : 'Sin fecha'}
                     </span>{' '}
-                    · Sede: {pedido.sede_nombre || 'Aranjuez'}
+                    {pedido.sede_nombre && <> · Sede {pedido.sede_nombre}</>}
                   </p>
                 </div>
 
