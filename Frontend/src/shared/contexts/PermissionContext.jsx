@@ -59,6 +59,17 @@ export const mockRolPermisos = [
 
 const PermissionContext = createContext(null);
 
+const leerUsuarioGuardado = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || '{}') || {};
+  } catch {
+    return {};
+  }
+};
+
+const inicialesDe = (nombre) =>
+  String(nombre).trim().split(/\s+/).filter((p) => /\p{L}/u.test(p[0])).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
+
 export function PermissionProvider({ children }) {
   const getInitialRoleId = () => {
     try {
@@ -79,6 +90,8 @@ export function PermissionProvider({ children }) {
   };
 
   const [roleId, setRoleId] = useState(getInitialRoleId);
+  // Usuario real de la sesión (el que guarda useAuth tras el login).
+  const [usuarioSesion, setUsuarioSesion] = useState(leerUsuarioGuardado);
   const [rolePermissions, setRolePermissions] = useState(() => {
     try {
       const stored = localStorage.getItem('cenarepas_role_permissions');
@@ -127,19 +140,24 @@ export function PermissionProvider({ children }) {
 
   const defaultRoute = useMemo(() => getDefaultRouteForRole(ROLE_NAMES[roleId]), [roleId]);
   const roleName = ROLE_NAMES[roleId] || 'Usuario';
-  const currentUserMeta = ROLE_DEFAULT_USERS[roleId] || ROLE_DEFAULT_USERS[1];
+  // Nombre, correo e iniciales son los del login. Los demás campos (cargo,
+  // teléfono…) siguen siendo de demostración: el backend no los devuelve.
+  const currentUserMeta = useMemo(() => {
+    const demo = ROLE_DEFAULT_USERS[roleId] || {};
+    const nombre = usuarioSesion.nombre || demo.nombre;
+    return {
+      ...demo,
+      nombre,
+      correo: usuarioSesion.correo || demo.correo,
+      iniciales: usuarioSesion.nombre ? inicialesDe(usuarioSesion.nombre) : demo.iniciales,
+    };
+  }, [roleId, usuarioSesion]);
 
   const setActiveRole = (nextRoleId) => {
     const numId = Number(nextRoleId);
     localStorage.setItem('cenarepas_role_id', String(numId));
-    
-    // Actualizar también el usuario por defecto simulado en localStorage si aplica
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const defaultMeta = ROLE_DEFAULT_USERS[numId];
-    if (defaultMeta) {
-      localStorage.setItem('user', JSON.stringify({ ...user, id_rol: numId, nombre: defaultMeta.nombre, correo: defaultMeta.correo }));
-    }
-    
+    // No toca el usuario guardado: antes lo reemplazaba por el de demostración.
+    setUsuarioSesion(leerUsuarioGuardado());
     setRoleId(numId);
   };
 
