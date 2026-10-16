@@ -113,14 +113,27 @@ export const MATRIZ_PERMISOS = {
   },
 };
 
+// Clave de MATRIZ_PERMISOS por nombre de rol (en minúsculas). Los ids de la
+// base cambian entre bases (en Staging Cliente es 26): por eso se usa el nombre.
+const MATRIZ_POR_NOMBRE = Object.fromEntries(
+  Object.entries(ROLE_NAMES).map(([id, nombre]) => [nombre.toLowerCase(), Number(id)])
+);
+
 /**
- * Determina la ruta de inicio por defecto para un rol dado.
- * Si tiene acceso al Dashboard ('/admin'), retorna '/admin'.
- * Si no tiene acceso (ej. Vendedor), retorna su primer módulo accesible.
+ * Ruta de inicio según el NOMBRE del rol (usuario.rol que devuelve el backend).
+ * Cliente → '/cliente'. Personal: '/admin' si ve el Dashboard; si no, su primer
+ * módulo accesible. Un rol desconocido va a su perfil (sin permisos de más).
  */
-export function getDefaultRouteForRole(roleId) {
-  const numRole = Number(roleId) || 1;
-  const perms = MATRIZ_PERMISOS[numRole] || MATRIZ_PERMISOS[1];
+export function getDefaultRouteForRole(rolNombre) {
+  const nombre = String(rolNombre || '').toLowerCase().trim();
+  if (nombre === 'cliente') {
+    return '/cliente';
+  }
+
+  const perms = MATRIZ_PERMISOS[MATRIZ_POR_NOMBRE[nombre]];
+  if (!perms) {
+    return '/admin/profile';
+  }
 
   if (perms.dashboard && perms.dashboard.includes('ver')) {
     return '/admin';

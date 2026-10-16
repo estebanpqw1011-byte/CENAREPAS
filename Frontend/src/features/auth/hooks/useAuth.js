@@ -18,53 +18,56 @@ export const useAuth = () => {
     setError('');
     setIsLoading(true);
     try {
-      // Sin sesión de respaldo: si el backend no responde o rechaza el acceso,
-      // el usuario ve el error en vez de entrar con un token que el backend no acepta.
       const res = await api.post('/auth/login', { correo: email, contrasena: password });
 
-      if (res?.token) {
+      if (res?.token && res?.usuario) {
         localStorage.setItem('token', res.token);
-        localStorage.setItem('user', JSON.stringify(res.usuario || { correo: email }));
-        if (res.usuario?.id_rol) {
+        localStorage.setItem('user', JSON.stringify(res.usuario));
+        if (res.usuario.id_rol) {
           localStorage.setItem('cenarepas_role_id', String(res.usuario.id_rol));
         }
+        setIsLoading(false);
+        toast.success('¡Bienvenido al sistema CENAREPAS!');
+        return { success: true, usuario: res.usuario };
       }
-      setIsLoading(false);
-      toast.success('¡Bienvenido al sistema CENAREPAS!');
-      return true;
+
+      throw new Error('Respuesta inválida del servidor al iniciar sesión');
     } catch (err) {
       setIsLoading(false);
-      const msg = err?.message || 'Correo o contraseña incorrectos';
+      const msg = err?.data?.message || err?.message || 'Correo o contraseña incorrectos';
       setError(msg);
       toast.error(msg);
-      return false;
+      return { success: false, message: msg };
     }
   };
 
-
-
-  const handleRegister = async ({ nombre, correo, contrasena, id_rol = 3 }) => {
+  const handleRegister = async (datosRegistro) => {
     setError('');
     setIsLoading(true);
     try {
-      const res = await api.post('/auth/register', { nombre, correo, contrasena, id_rol });
+      const res = await api.post('/auth/register', datosRegistro);
 
-      if (res?.token) {
+      // Seguridad: solo persistir si el backend devuelve usuario y token legítimos.
+      // NUNCA guardar datosRegistro (que contiene contrasena en texto plano).
+      if (res?.token && res?.usuario) {
         localStorage.setItem('token', res.token);
-        localStorage.setItem('user', JSON.stringify(res.usuario || { nombre, correo, id_rol }));
-        if (res.usuario?.id_rol) {
+        localStorage.setItem('user', JSON.stringify(res.usuario));
+        if (res.usuario.id_rol) {
           localStorage.setItem('cenarepas_role_id', String(res.usuario.id_rol));
         }
+        setIsLoading(false);
+        toast.success('¡Registro exitoso! Bienvenido a CENAREPAS.');
+        return { success: true, usuario: res.usuario };
       }
-      setIsLoading(false);
-      toast.success('¡Registro exitoso! Bienvenido a CENAREPAS.');
-      return true;
+
+      throw new Error('El servidor no devolvió una sesión válida');
     } catch (err) {
       setIsLoading(false);
-      const msg = err?.message || 'Error al registrar el usuario';
+      const msg = err?.data?.message || err?.message || 'Error al registrar el usuario';
+      const errors = err?.data?.errors || null;
       setError(msg);
       toast.error(msg);
-      return false;
+      return { success: false, message: msg, errors };
     }
   };
 
@@ -88,8 +91,8 @@ export const useAuth = () => {
       return false;
     }
 
-    if (newPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+    if (newPassword.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres');
       return false;
     }
 

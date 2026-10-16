@@ -3,130 +3,151 @@ import { motion } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
 import {
   User, Mail, Lock, Eye, EyeOff, Sparkles, ShieldCheck, ArrowRight,
-  TrendingUp, CheckCircle2, Package, Award, BarChart3,
-  Check, AlertCircle, Sun, Moon, Cpu,
-  Building2, Droplets, Gauge
+  AlertCircle, Sun, Moon, Building2, Phone, FileText, MapPin, Home
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { getDefaultRouteForRole } from '../../../shared/config/permisos';
+import { toast } from '../../../shared/utils/toast.jsx';
 import cenarepasLogo from '../../../assets/cenarepas-icon.svg';
 import authRegisterBg from '../../../assets/auth/auth-register-bg.png';
 
-// Variantes de animación escalonada para el panel de branding derecho
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.09,
-      delayChildren: 0.15,
-    },
-  },
-};
+const TIPOS_DOCUMENTO = ['CC', 'CE', 'NIT', 'PP', 'TI'];
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 14 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
-  },
-};
+const MUNICIPIOS_ENTREGA = [
+  'Medellín',
+  'Bello',
+  'Itagüí',
+  'Envigado',
+  'Sabaneta',
+  'La Estrella',
+  'Caldas',
+  'Copacabana',
+  'Girardota',
+  'Barbosa',
+];
 
-// Roles operativos de planta capturados en el alta (metadatos de onboarding,
-// independientes del rol RBAC que asigna permisos en shared/config/permisos.js).
 export default function Register() {
   const [nombre, setNombre] = useState('');
+  const [tipoDocumento, setTipoDocumento] = useState('CC');
+  const [documento, setDocumento] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [correo, setCorreo] = useState('');
+  const [municipio, setMunicipio] = useState('Medellín');
+  const [barrio, setBarrio] = useState('');
+  const [direccion, setDireccion] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [confirmarContrasena, setConfirmarContrasena] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
-  const { isLoading, error, setError, handleRegister, handleGoogleAuth, navigate } = useAuth();
+  const { isLoading, error, setError, handleRegister, navigate } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   // Cálculo visual de fortaleza de contraseña
   const passwordStrength = useMemo(() => {
     if (!contrasena) return { score: 0, label: '', color: 'bg-muted' };
     let score = 0;
-    if (contrasena.length >= 6) score += 1;
     if (contrasena.length >= 8) score += 1;
     if (/[A-Z]/.test(contrasena)) score += 1;
     if (/[0-9]/.test(contrasena) || /[^A-Za-z0-9]/.test(contrasena)) score += 1;
 
-    if (score <= 1) return { score: 1, label: 'Débil', color: 'bg-destructive text-destructive' };
-    if (score === 2 || score === 3) return { score: 2, label: 'Media', color: 'bg-[#E8B23D] text-[#8A5A14] dark:text-[#E8B23D]' };
-    return { score: 3, label: 'Fuerte y segura', color: 'bg-[#5A7A3A] text-[#5A7A3A] dark:text-[#AEC094]' };
+    if (score <= 1) return { score: 1, label: 'Débil (mín. 8 caracteres)', color: 'text-[#C1502D]' };
+    if (score === 2) return { score: 2, label: 'Aceptable', color: 'text-[#E8B23D]' };
+    return { score: 3, label: 'Fuerte y segura', color: 'text-[#5A7A3A]' };
   }, [contrasena]);
 
   const validate = () => {
     const errors = {};
-    if (!nombre.trim()) errors.nombre = 'Ingresa tu nombre completo';
-    if (!correo.trim()) errors.correo = 'Ingresa tu correo electrónico';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) errors.correo = 'Ingresa un correo electrónico válido';
-    if (!contrasena) errors.contrasena = 'Ingresa una contraseña';
-    else if (contrasena.length < 6) errors.contrasena = 'Debe tener al menos 6 caracteres';
-    if (!confirmarContrasena) errors.confirmarContrasena = 'Confirma tu contraseña';
-    else if (confirmarContrasena !== contrasena) errors.confirmarContrasena = 'Las contraseñas no coinciden';
-    if (!acceptTerms) errors.terms = 'Debes aceptar los Términos y la Política de Privacidad';
+    if (!nombre.trim() || nombre.trim().length < 3) {
+      errors.nombre = 'Ingresa tu nombre completo (mínimo 3 caracteres)';
+    }
+    if (!TIPOS_DOCUMENTO.includes(tipoDocumento)) {
+      errors.tipo_documento = 'Selecciona un tipo de documento válido';
+    }
+    if (!/^[0-9A-Za-z.-]{5,20}$/.test(documento.trim())) {
+      errors.documento = 'Ingresa un número de documento válido (5 a 20 caracteres)';
+    }
+    if (!/^[0-9+ ]{7,15}$/.test(telefono.trim())) {
+      errors.telefono = 'Ingresa un teléfono válido (7 a 15 dígitos)';
+    }
+    if (!correo.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
+      errors.correo = 'Ingresa un correo electrónico válido';
+    }
+    if (!MUNICIPIOS_ENTREGA.includes(municipio)) {
+      errors.municipio = 'Selecciona un municipio del Área Metropolitana';
+    }
+    if (!barrio.trim()) {
+      errors.barrio = 'Ingresa tu barrio de entrega';
+    }
+    if (!direccion.trim() || direccion.trim().length < 5) {
+      errors.direccion = 'Ingresa tu dirección completa (mínimo 5 caracteres)';
+    }
+    if (!contrasena || contrasena.length < 8) {
+      errors.contrasena = 'La contraseña debe tener al menos 8 caracteres';
+    }
+    if (!confirmarContrasena) {
+      errors.confirmarContrasena = 'Confirma tu contraseña';
+    } else if (confirmarContrasena !== contrasena) {
+      errors.confirmarContrasena = 'Las contraseñas no coinciden';
+    }
+    if (!acceptTerms) {
+      errors.terms = 'Debes aceptar los Términos y la Política de Privacidad';
+    }
     return errors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const errors = validate();
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    const clientErrors = validate();
+    setFieldErrors(clientErrors);
+    if (Object.keys(clientErrors).length > 0) return;
 
-    setSubmitted(true);
-    if (handleRegister) {
-      const success = await handleRegister({
-        nombre: nombre.trim(),
-        correo: correo.trim(),
-        contrasena,
-        id_rol: 3,
-      });
-      if (success) {
-        navigate('/admin/pedidos');
-      }
+    const datosRegistro = {
+      nombre: nombre.trim(),
+      tipo_documento: tipoDocumento,
+      documento: documento.trim(),
+      telefono: telefono.trim(),
+      correo: correo.trim(),
+      municipio: municipio.trim(),
+      barrio: barrio.trim(),
+      direccion: direccion.trim(),
+      contrasena,
+    };
+
+    const res = await handleRegister(datosRegistro);
+    if (res?.success) {
+      navigate(getDefaultRouteForRole(res.usuario.rol));
+    } else if (res?.errors) {
+      setFieldErrors(res.errors);
     }
   };
 
-  // Autenticación con Google
+  // Google: el backend todavía no valida el token de Google (Parte 6).
   const registerWithGoogle = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      if (handleGoogleAuth) {
-        const success = await handleGoogleAuth(tokenResponse.access_token);
-        if (success) {
-          navigate('/admin/pedidos');
-        }
-      } else {
-        navigate('/admin/pedidos');
-      }
+    onSuccess: () => {
+      toast.error('El registro con Google aún no está disponible. Completa el formulario.');
     },
-    onError: (error) => {
-      console.error('Error en autenticación con Google:', error);
+    onError: (err) => {
+      console.error('Error en autenticación con Google:', err);
     },
   });
 
   return (
-    <div className="min-h-screen lg:h-screen w-full flex bg-background font-sans text-foreground overflow-y-auto lg:overflow-hidden selection:bg-[#C1502D]/15 selection:text-[#C1502D] transition-colors duration-200">
+    <div className="min-h-screen w-full flex bg-background font-sans text-foreground overflow-y-auto selection:bg-[#C1502D]/15 selection:text-[#C1502D] transition-colors duration-200">
       
       {/* ════════════════════ PANEL IZQUIERDO — FORMULARIO DE REGISTRO ════════════════════ */}
       <motion.div
         initial={{ opacity: 0, x: -24 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full lg:w-[50%] xl:w-[48%] min-h-screen lg:h-screen overflow-y-auto flex flex-col justify-between px-4 sm:px-8 md:px-12 lg:px-14 xl:px-18 py-6 sm:py-7 lg:py-8 bg-background text-foreground"
+        className="w-full lg:w-[54%] xl:w-[50%] min-h-screen overflow-y-auto flex flex-col justify-between px-4 sm:px-8 md:px-10 lg:px-12 py-6 sm:py-8 bg-background text-foreground"
       >
-        
-        {/* Top bar / Logo + Badge de Estado + Theme Toggle */}
-        <div className="w-full max-w-[440px] mx-auto flex items-center justify-between gap-3 mb-4">
+        {/* Top bar / Logo + Theme Toggle */}
+        <div className="w-full max-w-[560px] mx-auto flex items-center justify-between gap-3 mb-4">
           <motion.a
             href="/"
             whileHover={{ scale: 1.02 }}
@@ -142,21 +163,21 @@ export default function Register() {
                 CENAREPAS
               </span>
               <span className="text-[8.5px] sm:text-[9px] font-bold tracking-[0.16em] uppercase text-[#C1502D] dark:text-[#E8B23D] mt-0.5">
-                SISTEMA DE GESTIÓN
+                PORTAL CLIENTES
               </span>
             </div>
           </motion.a>
           
           <div className="flex items-center gap-2">
-            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[#5A7A3A]/10 border border-[#5A7A3A]/20 dark:bg-[#5A7A3A]/25 dark:border-[#5A7A3A]/40 px-2.5 py-0.5 text-[10px] font-semibold text-[#5A7A3A] dark:text-[#AEC094]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#5A7A3A]/10 border border-[#5A7A3A]/20 dark:bg-[#5A7A3A]/25 dark:border-[#5A7A3A]/40 px-2.5 py-0.5 text-[10.5px] font-semibold text-[#5A7A3A] dark:text-[#AEC094]">
               <span className="size-1.5 rounded-full bg-[#5A7A3A] dark:bg-[#E8B23D] animate-pulse" />
-              Alta de Usuarios
+              Nuevo Cliente
             </span>
 
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-1.5 rounded-xl border border-border bg-card text-foreground hover:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="p-1.5 rounded-xl border border-border bg-card text-foreground hover:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D]"
               title={theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
               aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
@@ -166,39 +187,37 @@ export default function Register() {
         </div>
 
         {/* Contenedor Central del Formulario */}
-        <div className="w-full max-w-[440px] mx-auto my-auto py-2">
-
+        <div className="w-full max-w-[560px] mx-auto my-auto py-2">
           {/* Eyebrow de Marca */}
           <div className="inline-flex items-center gap-1.5 rounded-full border border-[#C1502D]/20 bg-[#C1502D]/10 px-2.5 py-0.5 text-[#C1502D] mb-2.5">
             <Sparkles className="size-3 text-[#C1502D]" />
             <span className="text-[10px] font-bold tracking-wider uppercase text-[#C1502D] dark:text-[#E8B23D]">
-              Registro de Usuario
+              Crea tu Cuenta de Cliente
             </span>
           </div>
 
-          {/* Encabezado con Acento Tipográfico Elegante Scoped */}
           <div className="mb-4">
             <h1 className="text-2xl sm:text-[1.75rem] font-bold text-foreground tracking-tight leading-tight">
-              Crear tu Cuenta
+              Regístrate en CENAREPAS
               <span 
                 className="block font-serif italic font-normal text-[#C1502D] dark:text-[#E8B23D] text-[0.96em] mt-0.5 tracking-normal"
                 style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
               >
-                en la plataforma de producción
+                y haz tus pedidos en línea
               </span>
             </h1>
             <p className="text-muted-foreground text-xs sm:text-[13px] mt-1.5 leading-relaxed font-normal">
-              Gestiona insumos, recetas y pedidos con total trazabilidad en tiempo real.
+              Gestiona tus compras, haz seguimiento en tiempo real y consulta tus abonos y créditos.
             </p>
           </div>
 
-          {/* Botón Google con Microinteracciones */}
+          {/* Botón Google */}
           <motion.button 
             onClick={() => registerWithGoogle()}
             whileHover={{ scale: 1.01, y: -1 }}
             whileTap={{ scale: 0.99 }}
             type="button"
-            className="w-full h-11 flex items-center justify-center gap-2.5 bg-card dark:bg-[#111820] border border-border dark:border-[rgba(148,163,184,0.14)] text-foreground font-semibold text-xs sm:text-[13px] rounded-xl hover:bg-muted hover:border-[#C1502D]/40 dark:hover:border-[#E8B23D]/40 hover:shadow-xs transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="w-full h-11 flex items-center justify-center gap-2.5 bg-card dark:bg-[#111820] border border-border dark:border-[rgba(148,163,184,0.14)] text-foreground font-semibold text-xs sm:text-[13px] rounded-xl hover:bg-muted hover:border-[#C1502D]/40 transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D]"
           >
             <svg className="size-4.5 shrink-0" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.58c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -209,22 +228,19 @@ export default function Register() {
             <span>Registrarse con Google</span>
           </motion.button>
 
-          {/* Divisor Visual */}
+          {/* Divisor */}
           <div className="flex items-center my-3.5">
-            <div className="flex-grow border-t border-border dark:border-[rgba(148,163,184,0.14)]"></div>
-            <span className="mx-3 text-[10.5px] text-muted-foreground font-medium uppercase tracking-wider">o completa tus datos</span>
-            <div className="flex-grow border-t border-border dark:border-[rgba(148,163,184,0.14)]"></div>
+            <div className="flex-grow border-t border-border"></div>
+            <span className="mx-3 text-[10.5px] text-muted-foreground font-medium uppercase tracking-wider">o completa el formulario</span>
+            <div className="flex-grow border-t border-border"></div>
           </div>
 
-          {/* Formulario Estructurado con los Campos Existentes */}
-          <form onSubmit={handleSubmit} className="space-y-3.5" noValidate>
-
-            {/* Mensaje de Error General (fallo de creación de cuenta) */}
+          {/* Formulario Completo de Cliente */}
+          <form onSubmit={handleSubmit} className="space-y-3" noValidate>
             {error && (
               <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                id="register-error"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
                 className="flex items-start gap-2.5 p-3 rounded-xl bg-[#C1502D]/10 dark:bg-[#C1502D]/20 border border-[#C1502D]/30 text-[#C1502D] dark:text-[#FFAAA0] text-xs leading-snug"
                 role="alert"
               >
@@ -233,246 +249,347 @@ export default function Register() {
               </motion.div>
             )}
 
-            {/* Campo 1: Nombre Completo */}
+            {/* 1. Nombre Completo */}
             <div>
-              <label htmlFor="register-nombre" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
-                Nombre Completo <span className="text-[#C1502D] dark:text-[#E8B23D]">*</span>
+              <label htmlFor="reg-nombre" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                Nombre Completo <span className="text-[#C1502D]">*</span>
               </label>
               <div className="relative">
-                <User className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <User className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <input
-                  id="register-nombre"
-                  name="nombre"
+                  id="reg-nombre"
                   type="text"
-                  maxLength={100}
                   value={nombre}
                   onChange={(e) => {
                     setNombre(e.target.value);
-                    if (fieldErrors.nombre) setFieldErrors((prev) => ({ ...prev, nombre: undefined }));
+                    if (fieldErrors.nombre) setFieldErrors(p => ({ ...p, nombre: undefined }));
                   }}
-                  placeholder="Ej: Carlos Mario Restrepo"
-                  autoComplete="name"
-                  aria-invalid={!!fieldErrors.nombre}
-                  aria-describedby={fieldErrors.nombre ? 'register-nombre-error' : undefined}
-                  className={`w-full h-11 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm placeholder:text-muted-foreground/60 rounded-xl pl-10 pr-3.5 transition-all duration-200 focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
-                    fieldErrors.nombre
-                      ? 'border-[#C1502D] dark:border-[#E05238] focus:border-[#C1502D] dark:focus:border-[#E05238] focus:ring-[#C1502D]/20 dark:focus:ring-[#E05238]/25'
-                      : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] dark:focus:border-[#E8B23D] focus:ring-[#C1502D]/15 dark:focus:ring-[#E8B23D]/20'
+                  placeholder="Ej: Laura Restrepo"
+                  className={`w-full h-10 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm rounded-xl pl-9 pr-3 transition-all focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
+                    fieldErrors.nombre ? 'border-[#C1502D] focus:ring-[#C1502D]/20' : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] focus:ring-[#C1502D]/15'
                   }`}
                 />
               </div>
               {fieldErrors.nombre && (
-                <p id="register-nombre-error" className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] dark:text-[#FFAAA0] mt-1">
+                <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
                   <AlertCircle className="size-3 shrink-0" /> {fieldErrors.nombre}
                 </p>
               )}
             </div>
 
-            {/* Campo 2: Correo Electrónico */}
-            <div>
-              <label htmlFor="register-correo" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
-                Correo Electrónico <span className="text-[#C1502D] dark:text-[#E8B23D]">*</span>
-              </label>
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            {/* 2. Documento: Tipo y Número (2 columnas) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label htmlFor="reg-tipo-doc" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                  Tipo Doc. <span className="text-[#C1502D]">*</span>
+                </label>
+                <div className="relative">
+                  <FileText className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <select
+                    id="reg-tipo-doc"
+                    value={tipoDocumento}
+                    onChange={(e) => setTipoDocumento(e.target.value)}
+                    className="w-full h-10 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] text-foreground text-xs sm:text-sm rounded-xl pl-9 pr-2.5 focus:border-[#C1502D] focus:outline-none focus:ring-2 focus:ring-[#C1502D]/15 cursor-pointer"
+                  >
+                    {TIPOS_DOCUMENTO.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label htmlFor="reg-doc" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                  Número de Documento <span className="text-[#C1502D]">*</span>
+                </label>
                 <input
-                  id="register-correo"
-                  name="correo"
-                  type="email"
-                  maxLength={100}
-                  value={correo}
+                  id="reg-doc"
+                  type="text"
+                  value={documento}
                   onChange={(e) => {
-                    setCorreo(e.target.value);
-                    if (fieldErrors.correo) setFieldErrors((prev) => ({ ...prev, correo: undefined }));
+                    setDocumento(e.target.value);
+                    if (fieldErrors.documento) setFieldErrors(p => ({ ...p, documento: undefined }));
                   }}
-                  placeholder="usuario@cenarepas.com"
-                  autoComplete="email"
-                  aria-invalid={!!fieldErrors.correo}
-                  aria-describedby={fieldErrors.correo ? 'register-correo-error' : undefined}
-                  className={`w-full h-11 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm placeholder:text-muted-foreground/60 rounded-xl pl-10 pr-3.5 transition-all duration-200 focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
-                    fieldErrors.correo
-                      ? 'border-[#C1502D] dark:border-[#E05238] focus:border-[#C1502D] dark:focus:border-[#E05238] focus:ring-[#C1502D]/20 dark:focus:ring-[#E05238]/25'
-                      : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] dark:focus:border-[#E8B23D] focus:ring-[#C1502D]/15 dark:focus:ring-[#E8B23D]/20'
+                  placeholder="Ej: 43306028"
+                  className={`w-full h-10 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm rounded-xl px-3 transition-all focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
+                    fieldErrors.documento ? 'border-[#C1502D] focus:ring-[#C1502D]/20' : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] focus:ring-[#C1502D]/15'
                   }`}
                 />
-              </div>
-              {fieldErrors.correo && (
-                <p id="register-correo-error" className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] dark:text-[#FFAAA0] mt-1">
-                  <AlertCircle className="size-3 shrink-0" /> {fieldErrors.correo}
-                </p>
-              )}
-            </div>
-
-            {/* Campo 3: Contraseña con Indicador Visual de Fortaleza */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label htmlFor="register-contrasena" className="text-[11.5px] font-bold text-foreground/90">
-                  Contraseña <span className="text-[#C1502D] dark:text-[#E8B23D]">*</span>
-                </label>
-                {contrasena && (
-                  <span className={`text-[10px] font-bold ${passwordStrength.color}`}>
-                    {passwordStrength.label}
-                  </span>
+                {fieldErrors.documento && (
+                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                    <AlertCircle className="size-3 shrink-0" /> {fieldErrors.documento}
+                  </p>
                 )}
               </div>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <input
-                  id="register-contrasena"
-                  name="contrasena"
-                  type={showPassword ? 'text' : 'password'}
-                  maxLength={255}
-                  value={contrasena}
-                  onChange={(e) => {
-                    setContrasena(e.target.value);
-                    if (fieldErrors.contrasena) setFieldErrors((prev) => ({ ...prev, contrasena: undefined }));
-                  }}
-                  placeholder="Mínimo 6 caracteres"
-                  autoComplete="new-password"
-                  aria-invalid={!!fieldErrors.contrasena}
-                  aria-describedby={fieldErrors.contrasena ? 'register-contrasena-error' : undefined}
-                  className={`w-full h-11 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm placeholder:text-muted-foreground/60 rounded-xl pl-10 pr-11 transition-all duration-200 focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
-                    fieldErrors.contrasena
-                      ? 'border-[#C1502D] dark:border-[#E05238] focus:border-[#C1502D] dark:focus:border-[#E05238] focus:ring-[#C1502D]/20 dark:focus:ring-[#E05238]/25'
-                      : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] dark:focus:border-[#E8B23D] focus:ring-[#C1502D]/15 dark:focus:ring-[#E8B23D]/20'
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-foreground hover:text-[#C1502D] dark:hover:text-[#E8B23D] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] rounded-md"
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                >
-                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
+            </div>
 
-              {/* Barra de progreso de fortaleza */}
-              {contrasena && (
-                <div className="grid grid-cols-3 gap-1 mt-1.5">
-                  <div className={`h-1 rounded-full transition-colors duration-300 ${passwordStrength.score >= 1 ? 'bg-[#C1502D]' : 'bg-muted'}`} />
-                  <div className={`h-1 rounded-full transition-colors duration-300 ${passwordStrength.score >= 2 ? 'bg-[#E8B23D]' : 'bg-muted'}`} />
-                  <div className={`h-1 rounded-full transition-colors duration-300 ${passwordStrength.score >= 3 ? 'bg-[#5A7A3A]' : 'bg-muted'}`} />
+            {/* 3. Teléfono y Correo (2 columnas) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label htmlFor="reg-tel" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                  Teléfono / Celular <span className="text-[#C1502D]">*</span>
+                </label>
+                <div className="relative">
+                  <Phone className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <input
+                    id="reg-tel"
+                    type="tel"
+                    value={telefono}
+                    onChange={(e) => {
+                      setTelefono(e.target.value);
+                      if (fieldErrors.telefono) setFieldErrors(p => ({ ...p, telefono: undefined }));
+                    }}
+                    placeholder="3104567890"
+                    className={`w-full h-10 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm rounded-xl pl-9 pr-3 transition-all focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
+                      fieldErrors.telefono ? 'border-[#C1502D] focus:ring-[#C1502D]/20' : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] focus:ring-[#C1502D]/15'
+                    }`}
+                  />
                 </div>
-              )}
-              {fieldErrors.contrasena && (
-                <p id="register-contrasena-error" className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] dark:text-[#FFAAA0] mt-1">
-                  <AlertCircle className="size-3 shrink-0" /> {fieldErrors.contrasena}
-                </p>
-              )}
-            </div>
-
-            {/* Campo 4: Confirmar Contraseña */}
-            <div>
-              <label htmlFor="register-confirmar-contrasena" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
-                Confirmar Contraseña <span className="text-[#C1502D] dark:text-[#E8B23D]">*</span>
-              </label>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <input
-                  id="register-confirmar-contrasena"
-                  name="confirmarContrasena"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  maxLength={255}
-                  value={confirmarContrasena}
-                  onChange={(e) => {
-                    setConfirmarContrasena(e.target.value);
-                    if (fieldErrors.confirmarContrasena) setFieldErrors((prev) => ({ ...prev, confirmarContrasena: undefined }));
-                  }}
-                  placeholder="Repite tu contraseña"
-                  autoComplete="new-password"
-                  aria-invalid={!!fieldErrors.confirmarContrasena}
-                  aria-describedby={fieldErrors.confirmarContrasena ? 'register-confirmar-contrasena-error' : undefined}
-                  className={`w-full h-11 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm placeholder:text-muted-foreground/60 rounded-xl pl-10 pr-11 transition-all duration-200 focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
-                    fieldErrors.confirmarContrasena
-                      ? 'border-[#C1502D] dark:border-[#E05238] focus:border-[#C1502D] dark:focus:border-[#E05238] focus:ring-[#C1502D]/20 dark:focus:ring-[#E05238]/25'
-                      : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] dark:focus:border-[#E8B23D] focus:ring-[#C1502D]/15 dark:focus:ring-[#E8B23D]/20'
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-foreground hover:text-[#C1502D] dark:hover:text-[#E8B23D] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] rounded-md"
-                  aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                >
-                  {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
+                {fieldErrors.telefono && (
+                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                    <AlertCircle className="size-3 shrink-0" /> {fieldErrors.telefono}
+                  </p>
+                )}
               </div>
-              {fieldErrors.confirmarContrasena && (
-                <p id="register-confirmar-contrasena-error" className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] dark:text-[#FFAAA0] mt-1">
-                  <AlertCircle className="size-3 shrink-0" /> {fieldErrors.confirmarContrasena}
+
+              <div>
+                <label htmlFor="reg-correo" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                  Correo Electrónico <span className="text-[#C1502D]">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <input
+                    id="reg-correo"
+                    type="email"
+                    value={correo}
+                    onChange={(e) => {
+                      setCorreo(e.target.value);
+                      if (fieldErrors.correo) setFieldErrors(p => ({ ...p, correo: undefined }));
+                    }}
+                    placeholder="cliente@correo.com"
+                    className={`w-full h-10 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm rounded-xl pl-9 pr-3 transition-all focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
+                      fieldErrors.correo ? 'border-[#C1502D] focus:ring-[#C1502D]/20' : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] focus:ring-[#C1502D]/15'
+                    }`}
+                  />
+                </div>
+                {fieldErrors.correo && (
+                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                    <AlertCircle className="size-3 shrink-0" /> {fieldErrors.correo}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* 4. Municipio y Barrio (2 columnas) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label htmlFor="reg-municipio" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                  Municipio de Entrega <span className="text-[#C1502D]">*</span>
+                </label>
+                <div className="relative">
+                  <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <select
+                    id="reg-municipio"
+                    value={municipio}
+                    onChange={(e) => {
+                      setMunicipio(e.target.value);
+                      if (fieldErrors.municipio) setFieldErrors(p => ({ ...p, municipio: undefined }));
+                    }}
+                    className="w-full h-10 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] text-foreground text-xs sm:text-sm rounded-xl pl-9 pr-2.5 focus:border-[#C1502D] focus:outline-none focus:ring-2 focus:ring-[#C1502D]/15 cursor-pointer"
+                  >
+                    {MUNICIPIOS_ENTREGA.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                {fieldErrors.municipio && (
+                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                    <AlertCircle className="size-3 shrink-0" /> {fieldErrors.municipio}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="reg-barrio" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                  Barrio <span className="text-[#C1502D]">*</span>
+                </label>
+                <div className="relative">
+                  <Home className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <input
+                    id="reg-barrio"
+                    type="text"
+                    value={barrio}
+                    onChange={(e) => {
+                      setBarrio(e.target.value);
+                      if (fieldErrors.barrio) setFieldErrors(p => ({ ...p, barrio: undefined }));
+                    }}
+                    placeholder="Ej: Aranjuez / Niquía"
+                    className={`w-full h-10 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm rounded-xl pl-9 pr-3 transition-all focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
+                      fieldErrors.barrio ? 'border-[#C1502D] focus:ring-[#C1502D]/20' : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] focus:ring-[#C1502D]/15'
+                    }`}
+                  />
+                </div>
+                {fieldErrors.barrio && (
+                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                    <AlertCircle className="size-3 shrink-0" /> {fieldErrors.barrio}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* 5. Dirección Completa */}
+            <div>
+              <label htmlFor="reg-direccion" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                Dirección de Entrega <span className="text-[#C1502D]">*</span>
+              </label>
+              <input
+                id="reg-direccion"
+                type="text"
+                value={direccion}
+                onChange={(e) => {
+                  setDireccion(e.target.value);
+                  if (fieldErrors.direccion) setFieldErrors(p => ({ ...p, direccion: undefined }));
+                }}
+                placeholder="Ej: Calle 92 # 49-20 (Edificio o casa)"
+                className={`w-full h-10 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm rounded-xl px-3 transition-all focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
+                  fieldErrors.direccion ? 'border-[#C1502D] focus:ring-[#C1502D]/20' : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] focus:ring-[#C1502D]/15'
+                }`}
+              />
+              {fieldErrors.direccion && (
+                <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                  <AlertCircle className="size-3 shrink-0" /> {fieldErrors.direccion}
                 </p>
               )}
             </div>
 
-            {/* Micro-aviso de Seguridad */}
+            {/* 6. Contraseña y Confirmar (2 columnas) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="reg-pwd" className="text-[11.5px] font-bold text-foreground/90">
+                    Contraseña <span className="text-[#C1502D]">*</span>
+                  </label>
+                  {contrasena && (
+                    <span className={`text-[10px] font-bold ${passwordStrength.color}`}>
+                      {passwordStrength.label}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <input
+                    id="reg-pwd"
+                    type={showPassword ? 'text' : 'password'}
+                    value={contrasena}
+                    onChange={(e) => {
+                      setContrasena(e.target.value);
+                      if (fieldErrors.contrasena) setFieldErrors(p => ({ ...p, contrasena: undefined }));
+                    }}
+                    placeholder="Mínimo 8 caracteres"
+                    autoComplete="new-password"
+                    className={`w-full h-10 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm rounded-xl pl-9 pr-9 transition-all focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
+                      fieldErrors.contrasena ? 'border-[#C1502D] focus:ring-[#C1502D]/20' : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] focus:ring-[#C1502D]/15'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-[#C1502D] transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  </button>
+                </div>
+                {fieldErrors.contrasena && (
+                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                    <AlertCircle className="size-3 shrink-0" /> {fieldErrors.contrasena}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="reg-confirm-pwd" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+                  Confirmar Contraseña <span className="text-[#C1502D]">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <input
+                    id="reg-confirm-pwd"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmarContrasena}
+                    onChange={(e) => {
+                      setConfirmarContrasena(e.target.value);
+                      if (fieldErrors.confirmarContrasena) setFieldErrors(p => ({ ...p, confirmarContrasena: undefined }));
+                    }}
+                    placeholder="Repite la contraseña"
+                    autoComplete="new-password"
+                    className={`w-full h-10 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm rounded-xl pl-9 pr-9 transition-all focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
+                      fieldErrors.confirmarContrasena ? 'border-[#C1502D] focus:ring-[#C1502D]/20' : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] focus:ring-[#C1502D]/15'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-[#C1502D] transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  </button>
+                </div>
+                {fieldErrors.confirmarContrasena && (
+                  <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1">
+                    <AlertCircle className="size-3 shrink-0" /> {fieldErrors.confirmarContrasena}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Aviso de Seguridad */}
             <div className="flex items-start gap-2 bg-[#5A7A3A]/10 dark:bg-[#5A7A3A]/20 border border-[#5A7A3A]/25 rounded-xl p-2.5">
               <ShieldCheck className="size-4 text-[#5A7A3A] dark:text-[#AEC094] shrink-0 mt-0.5" />
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Tus accesos están protegidos con cifrado de grado empresarial y registro de auditoría.
+                Tus datos de entrega y pedidos están protegidos bajo la política de privacidad de CENAREPAS.
               </p>
             </div>
 
-            {/* Aceptación de Términos y Política de Privacidad */}
+            {/* Términos y condiciones */}
             <div>
-              <label htmlFor="register-terms" className="flex items-start gap-2.5 cursor-pointer select-none group">
+              <label htmlFor="reg-terms" className="flex items-start gap-2.5 cursor-pointer select-none">
                 <input
-                  id="register-terms"
+                  id="reg-terms"
                   type="checkbox"
                   checked={acceptTerms}
                   onChange={(e) => {
                     setAcceptTerms(e.target.checked);
-                    if (fieldErrors.terms) setFieldErrors((prev) => ({ ...prev, terms: undefined }));
+                    if (fieldErrors.terms) setFieldErrors(p => ({ ...p, terms: undefined }));
                   }}
-                  aria-invalid={!!fieldErrors.terms}
-                  aria-describedby={fieldErrors.terms ? 'register-terms-error' : undefined}
-                  className={`mt-0.5 size-3.5 shrink-0 rounded border-border text-[#C1502D] dark:text-[#E8B23D] accent-[#C1502D] dark:accent-[#E8B23D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer ${
-                    fieldErrors.terms ? 'outline outline-1 outline-[#C1502D] dark:outline-[#E05238]' : ''
-                  }`}
+                  className="mt-0.5 size-3.5 shrink-0 rounded border-border text-[#C1502D] accent-[#C1502D] cursor-pointer"
                 />
                 <span className="text-[11.5px] text-muted-foreground leading-relaxed">
-                  Acepto los{' '}
-                  <a
-                    href="#"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-[#C1502D] dark:text-[#E8B23D] font-semibold hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D]"
-                  >
-                    Términos de Servicio
-                  </a>{' '}
-                  y la{' '}
-                  <a
-                    href="#"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-[#C1502D] dark:text-[#E8B23D] font-semibold hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D]"
-                  >
-                    Política de Privacidad
-                  </a>{' '}
-                  de CENAREPAS. <span className="text-[#C1502D] dark:text-[#E8B23D]">*</span>
+                  Acepto los Términos de Servicio y la Política de Tratamiento de Datos de CENAREPAS. <span className="text-[#C1502D]">*</span>
                 </span>
               </label>
               {fieldErrors.terms && (
-                <p id="register-terms-error" className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] dark:text-[#FFAAA0] mt-1 ml-6">
+                <p className="flex items-center gap-1 text-[11px] font-semibold text-[#C1502D] mt-1 ml-6">
                   <AlertCircle className="size-3 shrink-0" /> {fieldErrors.terms}
                 </p>
               )}
             </div>
 
-            {/* Botón Principal de Envío */}
+            {/* Botón Principal */}
             <motion.button
               whileHover={{ scale: 1.01, y: -1 }}
               whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={isLoading}
-              className="w-full h-11 mt-1.5 flex items-center justify-center gap-2 rounded-xl bg-[#C1502D] hover:bg-[#A84223] active:bg-[#8C341A] text-white font-bold text-xs sm:text-[13px] tracking-wide shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="w-full h-11 mt-2 flex items-center justify-center gap-2 rounded-xl bg-[#C1502D] hover:bg-[#A84223] active:bg-[#8C341A] text-white font-bold text-xs sm:text-[13px] tracking-wide shadow-md transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
                   <div className="size-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  <span>Creando cuenta...</span>
+                  <span>Registrando cliente...</span>
                 </>
               ) : (
                 <>
-                  <span>Completar Registro</span>
+                  <span>Crear mi Cuenta de Cliente</span>
                   <ArrowRight className="size-4" />
                 </>
               )}
@@ -480,207 +597,73 @@ export default function Register() {
           </form>
 
           {/* Enlace al Login */}
-          <p className="text-center text-xs text-muted-foreground mt-5">
+          <p className="text-center text-xs text-muted-foreground mt-4">
             ¿Ya tienes una cuenta registrada?{' '}
             <button
               type="button"
               onClick={() => navigate('/admin/login')}
-              className="text-[#C1502D] dark:text-[#E8B23D] font-bold hover:underline bg-transparent border-0 cursor-pointer rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="text-[#C1502D] dark:text-[#E8B23D] font-bold hover:underline bg-transparent border-0 cursor-pointer"
             >
               Inicia sesión aquí
             </button>
           </p>
         </div>
 
-        {/* Footer Scoped */}
-        <div className="w-full max-w-[440px] mx-auto pt-3 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
+        {/* Footer */}
+        <div className="w-full max-w-[560px] mx-auto pt-3 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
           <span>&copy; {new Date().getFullYear()} CENAREPAS</span>
-          <span className="font-semibold text-foreground/80">Plataforma Masarepas</span>
+          <span className="font-semibold text-foreground/80">Arepas Tradicionales y Rellenas</span>
         </div>
       </motion.div>
 
-      {/* ════════════════════ PANEL DERECHO — EDITORIAL ONBOARDING & INDUSTRIAL SHOWCASE ════════════════════ */}
-      <div className="hidden lg:flex lg:w-[48%] xl:w-[52%] relative flex-col justify-between p-8 sm:p-12 lg:p-14 xl:p-16 overflow-hidden min-h-screen bg-[#110d0b]">
-        {/* Fotografía de fondo: arepas listas para despacho/empaque */}
+      {/* ════════════════════ PANEL DERECHO — BRANDING EDITORIAL ════════════════════ */}
+      <div className="hidden lg:flex lg:w-[46%] xl:w-[50%] relative flex-col justify-between p-8 sm:p-12 lg:p-14 overflow-hidden min-h-screen bg-[#110d0b]">
         <img
           src={authRegisterBg}
           alt=""
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
-
-        {/* Degradado orgánico con overlay ligero para mantener nitidez de la foto */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#2a1308] via-[#241b07] to-[#0d1d13] opacity-45 pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0C0402]/65 via-transparent to-[#1E0E07]/35 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#2a1308] via-[#241b07] to-[#0d1d13] opacity-50 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0C0402]/70 via-transparent to-[#1E0E07]/40 pointer-events-none" />
 
         {/* Halos ambientales */}
         <div className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#f66018]/15 blur-3xl" />
-        <div className="pointer-events-none absolute top-1/2 left-10 w-80 h-80 rounded-full bg-[#cea700]/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 right-1/4 w-80 h-80 rounded-full bg-[#00b954]/15 blur-3xl" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(#ffb599_1px,transparent_1px)] [background-size:24px_24px]" />
+        <div className="pointer-events-none absolute bottom-10 right-1/4 w-80 h-80 rounded-full bg-[#cea700]/15 blur-3xl" />
 
-        {/* Encabezado Superior: Badge de Telemetría de Planta */}
+        {/* Header Superior del Panel */}
         <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-3 backdrop-blur-md bg-[#161310]/50 border border-white/10 px-4 py-2 rounded-2xl shadow-lg">
+          <div className="flex items-center gap-3 backdrop-blur-md bg-[#161310]/60 border border-white/10 px-4 py-2 rounded-2xl shadow-lg">
             <Building2 className="size-5 text-[#efc200]" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-mono text-white/70 uppercase tracking-wider">Malla de Plantas Activas</span>
-              <span className="text-[11.5px] font-mono text-white font-semibold">14 Molinos en Red · Colombia & México</span>
+              <span className="text-[10px] font-mono text-white/70 uppercase tracking-wider">Sabor Artesanal Paisa</span>
+              <span className="text-[11.5px] font-mono text-white font-semibold">Sedes Aranjuez & Bello Oriente</span>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-[#4ae176] bg-[#00b954]/20 border border-[#4ae176]/30 backdrop-blur-md px-3 py-1.5 rounded-xl">
+          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#4ae176] bg-[#00b954]/20 border border-[#4ae176]/30 backdrop-blur-md px-3 py-1.5 rounded-xl">
             <span className="w-2 h-2 rounded-full bg-[#4ae176] animate-pulse"></span>
-            <span>Sincronización en vivo</span>
+            <span>Pedidos en línea</span>
           </div>
         </div>
 
-        {/* Sección Central: Títulos Editoriales y Tarjetas Flotantes */}
-        <div className="relative z-10 my-auto py-6 space-y-6">
-          <div className="max-w-xl">
-            <div className="inline-flex items-center gap-2 mb-2.5">
-              <span className="h-px w-8 bg-[#efc200]"></span>
-              <span className="text-[11px] font-mono tracking-widest uppercase text-[#efc200] font-bold">Arquitectura de Molienda 4.0</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl xl:text-[34px] font-bold tracking-tight text-white leading-tight">
-              Únete y digitaliza tu operación de arepas.
-            </h2>
-            <p className="text-sm sm:text-[14.5px] text-[#e2bfb2] mt-3 leading-relaxed max-w-lg font-light">
-              Desde el silo de maíz hasta la entrega final en puntos de venta. Trazabilidad total de molienda y formulación precisa en tiempo real.
-            </p>
+        {/* Sección Central Editorial */}
+        <div className="relative z-10 my-auto py-6 space-y-4 max-w-xl">
+          <div className="inline-flex items-center gap-2 mb-1">
+            <span className="h-px w-8 bg-[#efc200]"></span>
+            <span className="text-[11px] font-mono tracking-widest uppercase text-[#efc200] font-bold">Autogestión de Clientes</span>
           </div>
-
-          {/* Cluster de Métricas Flotantes con Glassmorphism */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 pt-2"
-          >
-            {/* Tarjeta 1: Monitoreo de Calidad / Humedad (7 Cols) */}
-            <motion.div
-              variants={itemVariants}
-              className="sm:col-span-7 rounded-2xl bg-[#161310]/60 backdrop-blur-xl border border-white/15 p-4 sm:p-5 shadow-2xl relative overflow-hidden transition-all hover:-translate-y-0.5"
-            >
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-lg bg-white/10 text-[#ffb599]">
-                    <Droplets className="size-4" />
-                  </span>
-                  <span className="text-[10.5px] font-mono uppercase tracking-wider text-white/70">Monitoreo de Calidad</span>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#00b954]/20 text-[#4ae176] border border-[#4ae176]/30 font-semibold">
-                  Lote #M-902
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between mt-1">
-                <div>
-                  <span className="text-xl sm:text-2xl font-bold text-white tracking-tight">42.5%</span>
-                  <span className="text-[11px] font-mono text-[#4ae176] ml-1.5 font-medium">Humedad Óptima</span>
-                </div>
-                <span className="text-[10px] font-mono text-white/60">Meta: 42.0 - 43.0%</span>
-              </div>
-              {/* Barra de calibración segmentada */}
-              <div className="mt-3 grid grid-cols-6 gap-1 h-2">
-                <div className="rounded-full bg-[#4ae176]/40"></div>
-                <div className="rounded-full bg-[#4ae176]/70"></div>
-                <div className="rounded-full bg-[#4ae176] shadow-[0_0_10px_#4ae176]"></div>
-                <div className="rounded-full bg-[#4ae176] shadow-[0_0_10px_#4ae176]"></div>
-                <div className="rounded-full bg-[#4ae176]/70"></div>
-                <div className="rounded-full bg-white/15"></div>
-              </div>
-              <div className="flex items-center justify-between mt-3 text-[10.5px] font-mono text-white/80">
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="size-3.5 text-[#4ae176]" />
-                  Viscosidad en tolva aprobada
-                </span>
-                <span className="text-white/60">Sensor S-4B</span>
-              </div>
-            </motion.div>
-
-            {/* Tarjeta 2: Eficiencia OEE con Sparkline (5 Cols) */}
-            <motion.div
-              variants={itemVariants}
-              className="sm:col-span-5 rounded-2xl bg-[#161310]/60 backdrop-blur-xl border border-white/15 p-4 sm:p-5 shadow-2xl relative overflow-hidden transition-all hover:-translate-y-0.5 flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-lg bg-white/10 text-[#efc200]">
-                    <Gauge className="size-4" />
-                  </span>
-                  <span className="text-[10.5px] font-mono uppercase tracking-wider text-white/70">Eficiencia OEE</span>
-                </div>
-                <span className="w-2 h-2 rounded-full bg-[#efc200] shadow-[0_0_8px_#efc200]"></span>
-              </div>
-              <div className="my-2">
-                <div className="text-xl sm:text-2xl font-bold text-white tracking-tight">99.4%</div>
-                <span className="text-[10.5px] font-mono text-white/70">Línea de Formado 3</span>
-              </div>
-              {/* Sparkline vectorial con brillo dorado */}
-              <div className="w-full pt-1">
-                <svg className="w-full h-8 stroke-[#efc200] fill-none" viewBox="0 0 140 36">
-                  <defs>
-                    <linearGradient id="registerTertiaryGlow" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#efc200" stopOpacity="0.35" />
-                      <stop offset="100%" stopColor="#efc200" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
-                  <path d="M0,28 Q15,22 30,26 T60,18 T90,20 T115,10 T140,6 L140,36 L0,36 Z" fill="url(#registerTertiaryGlow)" stroke="none" />
-                  <path d="M0,28 Q15,22 30,26 T60,18 T90,20 T115,10 T140,6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
-                  <circle cx="140" cy="6" fill="#efc200" r="3.5" stroke="#161310" strokeWidth="2" />
-                </svg>
-              </div>
-            </motion.div>
-
-            {/* Tarjeta 3: Certificación HACCP (12 Cols) */}
-            <motion.div
-              variants={itemVariants}
-              className="sm:col-span-12 rounded-2xl bg-[#161310]/60 backdrop-blur-xl border border-white/15 p-4 shadow-xl flex items-center justify-between flex-wrap sm:flex-nowrap gap-3.5"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#00b954]/20 border border-[#4ae176]/30 flex items-center justify-center text-[#4ae176] shrink-0">
-                  <ShieldCheck className="size-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-white">Certificación de Lotes HACCP</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#00b954]/20 text-[#4ae176] uppercase font-bold border border-[#4ae176]/30">Activo</span>
-                  </div>
-                  <p className="text-xs text-white/70 mt-0.5">
-                    Protocolo térmico de precocido y esterilización validado para exportación FDA/INVIMA.
-                  </p>
-                </div>
-              </div>
-              <div className="shrink-0 flex items-center gap-2 text-[10.5px] font-mono text-white/60">
-                <Lock className="size-3.5 text-[#efc200]" />
-                <span>Inmutable Blockchain Hash</span>
-              </div>
-            </motion.div>
-          </motion.div>
+          <h2 className="text-2xl sm:text-3xl xl:text-[34px] font-bold tracking-tight text-white leading-tight">
+            Tus arepas favoritas, directas a tu mesa o negocio.
+          </h2>
+          <p className="text-sm sm:text-[14.5px] text-[#e2bfb2] leading-relaxed max-w-lg font-light">
+            Explora nuestro catálogo de arepas tradicionales de maíz y deliciosas arepas rellenas. Pide en minutos con entrega programada y pagos transparentes.
+          </p>
         </div>
 
-        {/* Pie de Panel Editorial */}
-        <div className="relative z-10 pt-4 border-t border-white/10 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex -space-x-2 overflow-hidden">
-              <div className="inline-block h-7 w-7 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-[10px] font-mono text-[#ffb599] font-bold shadow-md">
-                MV
-              </div>
-              <div className="inline-block h-7 w-7 rounded-full bg-[#f66018] flex items-center justify-center text-[10px] font-mono text-white font-bold shadow-md">
-                CR
-              </div>
-              <div className="inline-block h-7 w-7 rounded-full bg-[#efc200] flex items-center justify-center text-[10px] font-mono text-black font-bold shadow-md">
-                SL
-              </div>
-            </div>
-            <span className="text-xs text-white/80">
-              Utilizado por <strong className="text-white font-semibold">+85 plantas</strong> de arepas líderes en la región
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-[10.5px] font-mono text-white/60">
-            <span>Seguridad ISO 22000</span>
-            <span>•</span>
-            <span>99.98% Uptime</span>
-          </div>
+        {/* Footer del panel derecho */}
+        <div className="relative z-10 flex items-center justify-between text-xs text-white/60 border-t border-white/10 pt-4 font-mono">
+          <span>Área Metropolitana del Valle de Aburrá</span>
+          <span className="text-[#efc200]">CENAREPAS Masarepas</span>
         </div>
       </div>
 

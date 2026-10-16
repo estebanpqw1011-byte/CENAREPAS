@@ -125,7 +125,7 @@ export function PermissionProvider({ children }) {
   const puedeVer = (modulo) => can(modulo, 'ver');
   const puedeHacer = (modulo, accion) => can(modulo, accion);
 
-  const defaultRoute = useMemo(() => getDefaultRouteForRole(roleId), [roleId]);
+  const defaultRoute = useMemo(() => getDefaultRouteForRole(ROLE_NAMES[roleId]), [roleId]);
   const roleName = ROLE_NAMES[roleId] || 'Usuario';
   const currentUserMeta = ROLE_DEFAULT_USERS[roleId] || ROLE_DEFAULT_USERS[1];
 

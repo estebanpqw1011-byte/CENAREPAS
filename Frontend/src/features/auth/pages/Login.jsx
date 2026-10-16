@@ -11,7 +11,8 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { usePermissions } from '../../../shared/contexts/PermissionContext';
-import { getDefaultRouteForRole, ROLES } from '../../../shared/config/permisos';
+import { getDefaultRouteForRole } from '../../../shared/config/permisos';
+import { toast } from '../../../shared/utils/toast.jsx';
 import cenarepasLogo from '../../../assets/cenarepas-icon.svg';
 import authLoginBg from '../../../assets/auth/auth-login-bg.png';
 import { Sun, Moon } from 'lucide-react';
@@ -43,52 +44,28 @@ export default function Login({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const { isLoading, error, setError, handleLogin, handleGoogleAuth, navigate } = useAuth();
+  const { isLoading, error, setError, handleLogin, navigate } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { setActiveRole } = usePermissions();
 
-  const determineRoleFromEmail = (targetEmail) => {
-    const lower = (targetEmail || '').toLowerCase().trim();
-    if (lower.includes('secretaria') || lower.includes('secre')) return ROLES.SECRETARIA;
-    if (lower.includes('vendedor') || lower.includes('ventas') || lower.includes('vende')) return ROLES.VENDEDOR;
-    return ROLES.ADMIN;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const success = await handleLogin(email, password);
-    if (success) {
-      let targetRoleId = determineRoleFromEmail(email);
-      try {
-        const stored = localStorage.getItem('cenarepas_role_id');
-        if (stored) targetRoleId = Number(stored);
-      } catch {
-        // ignore
+    const res = await handleLogin(email, password);
+    if (res?.success && res?.usuario) {
+      const userObj = res.usuario;
+      if (userObj.id_rol) {
+        setActiveRole(userObj.id_rol);
       }
-      setActiveRole(targetRoleId);
       if (onLogin) onLogin();
-      const targetRoute = getDefaultRouteForRole(targetRoleId);
-      navigate(targetRoute);
+      navigate(getDefaultRouteForRole(userObj.rol));
     }
   };
 
-  // Manejador del flujo de Google Login
+  // Google: el backend todavía no valida el token de Google (Parte 6). Hasta
+  // entonces no se inicia sesión: antes se entraba con el rol 1 sin backend.
   const loginWithGoogle = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      if (handleGoogleAuth) {
-        const success = await handleGoogleAuth(tokenResponse.access_token);
-        if (success) {
-          const storedRoleId = Number(localStorage.getItem('cenarepas_role_id') || 1);
-          setActiveRole(storedRoleId);
-          if (onLogin) onLogin();
-          navigate(getDefaultRouteForRole(storedRoleId));
-        }
-      } else {
-        const storedRoleId = Number(localStorage.getItem('cenarepas_role_id') || 1);
-        setActiveRole(storedRoleId);
-        if (onLogin) onLogin();
-        navigate(getDefaultRouteForRole(storedRoleId));
-      }
+    onSuccess: () => {
+      toast.error('El acceso con Google aún no está disponible. Ingresa con tu correo y contraseña.');
     },
     onError: (error) => {
       console.error('Error en la autenticación con Google:', error);
@@ -551,4 +528,4 @@ export default function Login({ onLogin }) {
 
     </div>
   );
-}
+}
