@@ -12,16 +12,14 @@ export const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 4000,
-  ssl: config.nodeEnv === 'production'
+  // Ver config.db.ssl en env.js (DB_SSL, sslmode de DATABASE_URL, host de Render).
+  ssl: config.db.ssl
     ? { rejectUnauthorized: false }
     : false,
-});
-
-// Configurar el esquema por defecto en cada conexión
-pool.on('connect', (client) => {
-  client.query(`SET search_path TO ${config.db.schema}, public;`).catch((err) => {
-    // ignore schema setup errors if schema does not exist yet
-  });
+  // Esquema por defecto como parámetro de arranque: PostgreSQL lo aplica al
+  // abrir la conexión, antes de la primera consulta. (Un SET en
+  // pool.on('connect') no se espera y corre en paralelo con esa consulta.)
+  options: `-c search_path=${config.db.schema},public`,
 });
 
 pool.on('error', (err) => {
@@ -46,7 +44,9 @@ export const checkDbConnection = async () => {
     console.log(`✅ [Database]: Conexión exitosa a PostgreSQL (${config.db.database}.${config.db.schema}) a las ${res.rows[0].now}`);
     return true;
   } catch (err) {
-    console.warn(`⚠️ [Database]: No se pudo conectar a PostgreSQL (${err.message}). Verifica tu archivo Backend/.env`);
+    // ECONNREFUSED llega como AggregateError, con message vacío.
+    const detalle = err.message || err.code || String(err);
+    console.warn(`⚠️ [Database]: No se pudo conectar a PostgreSQL en ${config.db.host}:${config.db.port}/${config.db.database} (ssl: ${config.db.ssl}) (${detalle}). Verifica DATABASE_URL o las variables DB_* (Backend/.env)`);
     return false;
   } finally {
     if (client) client.release();

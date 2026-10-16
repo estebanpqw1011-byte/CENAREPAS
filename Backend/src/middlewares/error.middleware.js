@@ -11,7 +11,13 @@ const MENSAJES_UNIQUE = {
 };
 
 export const errorHandler = (err, req, res, next) => {
-  // Errores de PostgreSQL: se traducen a 4xx con un mensaje entendible.
+  // Errores de PostgreSQL: se traducen a 4xx con un mensaje entendible y se
+  // registran con la restricción/columna, que el cliente no ve.
+  if (['23505', '23503', '23514', '22P02', '23502'].includes(err.code)) {
+    console.warn(`[DB ${err.code}] ${req.method} ${req.originalUrl}: ${err.message}`
+      + (err.constraint ? ` (restricción ${err.constraint})` : '')
+      + (err.column ? ` (columna ${err.column})` : ''));
+  }
   if (err.code === '23505') {
     return errorResponse(res, MENSAJES_UNIQUE[err.constraint] || 'El registro ya existe', 409);
   }

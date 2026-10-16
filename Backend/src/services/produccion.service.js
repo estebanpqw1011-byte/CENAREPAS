@@ -1,4 +1,5 @@
 import { query, pool } from '../config/db.js';
+import { notFound } from '../utils/httpError.js';
 
 const sanitizeInsumos = (insumos) => {
   if (!Array.isArray(insumos)) return [];
@@ -9,33 +10,28 @@ const sanitizeInsumos = (insumos) => {
 
 export class ProduccionService {
   static async getAll() {
-    try {
-      const res = await query(`
-        SELECT lp.*, f.nombre AS ficha_nombre, u.nombre AS responsable_nombre,
-               COALESCE(
-                 json_agg(
-                   json_build_object(
-                     'id_lote_insumo', lpi.id_lote_insumo,
-                     'id_insumo', lpi.id_insumo,
-                     'insumo_nombre', i.nombre,
-                     'cantidad_consumida', lpi.cantidad_consumida
-                   )
-                 ) FILTER (WHERE lpi.id_lote_insumo IS NOT NULL),
-                 '[]'
-               ) AS insumos_consumidos
-        FROM lote_produccion lp
-        LEFT JOIN ficha_tecnica f ON lp.id_ficha = f.id_ficha
-        LEFT JOIN usuario u ON lp.id_usuario_responsable = u.id_usuario
-        LEFT JOIN lote_produccion_insumo lpi ON lp.id_lote = lpi.id_lote
-        LEFT JOIN insumo i ON lpi.id_insumo = i.id_insumo
-        GROUP BY lp.id_lote, f.nombre, u.nombre
-        ORDER BY lp.id_lote ASC
-      `);
-      return res.rows || [];
-    } catch (error) {
-      console.warn('[ProduccionService.getAll] Fallback:', error.message);
-      return [];
-    }
+    const res = await query(`
+      SELECT lp.*, f.nombre AS ficha_nombre, u.nombre AS responsable_nombre,
+             COALESCE(
+               json_agg(
+                 json_build_object(
+                   'id_lote_insumo', lpi.id_lote_insumo,
+                   'id_insumo', lpi.id_insumo,
+                   'insumo_nombre', i.nombre,
+                   'cantidad_consumida', lpi.cantidad_consumida
+                 )
+               ) FILTER (WHERE lpi.id_lote_insumo IS NOT NULL),
+               '[]'
+             ) AS insumos_consumidos
+      FROM lote_produccion lp
+      LEFT JOIN ficha_tecnica f ON lp.id_ficha = f.id_ficha
+      LEFT JOIN usuario u ON lp.id_usuario_responsable = u.id_usuario
+      LEFT JOIN lote_produccion_insumo lpi ON lp.id_lote = lpi.id_lote
+      LEFT JOIN insumo i ON lpi.id_insumo = i.id_insumo
+      GROUP BY lp.id_lote, f.nombre, u.nombre
+      ORDER BY lp.id_lote ASC
+    `);
+    return res.rows || [];
   }
 
   static async getById(id) {
@@ -98,7 +94,8 @@ export class ProduccionService {
          RETURNING *`,
         [id_ficha, id_usuario_responsable, fecha_produccion, cantidad_producida, estado, observaciones, id]
       );
-      const updatedLote = res.rows[0] || { id_lote: id, ...data };
+      const updatedLote = res.rows[0];
+      if (!updatedLote) throw notFound('Lote de producción no encontrado');
 
       // insumosRecibidos === null significa que el payload no incluyó el campo `insumos`:
       // no se toca la relación existente. Un array (incluso vacío) reemplaza el detalle completo.

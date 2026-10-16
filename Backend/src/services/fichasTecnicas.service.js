@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { notFound } from '../utils/httpError.js';
 
 /** Ficha con sus insumos; lo usan el listado y el detalle. */
 const SELECT_FICHA = `
@@ -22,13 +23,8 @@ const SELECT_FICHA = `
 
 export class FichasTecnicasService {
   static async getAll() {
-    try {
-      const res = await query(`${SELECT_FICHA} GROUP BY f.id_ficha ORDER BY f.id_ficha ASC`);
-      return res.rows || [];
-    } catch (error) {
-      console.warn('[FichasTecnicasService.getAll] Fallback:', error.message);
-      return [];
-    }
+    const res = await query(`${SELECT_FICHA} GROUP BY f.id_ficha ORDER BY f.id_ficha ASC`);
+    return res.rows || [];
   }
 
   /** Igual que el listado: con sus insumos (nombre, cantidad y unidad). */
@@ -74,7 +70,8 @@ export class FichasTecnicasService {
        RETURNING *`,
       [nombre, descripcion, instrucciones_preparacion, tiempo_estimado_minutos, rendimiento_lote, estado, id]
     );
-    return res.rows[0] || { id_ficha: id, ...data };
+    if (!res.rows[0]) throw notFound('Ficha técnica no encontrada');
+    return res.rows[0];
   }
 
   /** Inactiva el registro (sin borrado físico: conserva el historial). */

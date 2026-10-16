@@ -1,36 +1,32 @@
 import { query } from '../config/db.js';
+import { notFound } from '../utils/httpError.js';
 
 export class ComprasService {
   static async getAll() {
-    try {
-      const res = await query(`
-        SELECT c.*, p.nombre AS proveedor_nombre, u.nombre AS usuario_nombre,
-               COALESCE(
-                 json_agg(
-                   json_build_object(
-                     'id_detalle_compra', dc.id_detalle_compra,
-                     'id_insumo', dc.id_insumo,
-                     'insumo_nombre', i.nombre,
-                     'cantidad', dc.cantidad,
-                     'valor_unitario', dc.valor_unitario,
-                     'subtotal', dc.subtotal
-                   )
-                 ) FILTER (WHERE dc.id_detalle_compra IS NOT NULL),
-                 '[]'
-               ) AS detalles
-        FROM compra c
-        LEFT JOIN proveedor p ON c.id_proveedor = p.id_proveedor
-        LEFT JOIN usuario u ON c.id_usuario = u.id_usuario
-        LEFT JOIN detalle_compra dc ON c.id_compra = dc.id_compra
-        LEFT JOIN insumo i ON dc.id_insumo = i.id_insumo
-        GROUP BY c.id_compra, p.nombre, u.nombre
-        ORDER BY c.id_compra ASC
-      `);
-      return res.rows || [];
-    } catch (error) {
-      console.warn('[ComprasService.getAll] Fallback:', error.message);
-      return [];
-    }
+    const res = await query(`
+      SELECT c.*, p.nombre AS proveedor_nombre, u.nombre AS usuario_nombre,
+             COALESCE(
+               json_agg(
+                 json_build_object(
+                   'id_detalle_compra', dc.id_detalle_compra,
+                   'id_insumo', dc.id_insumo,
+                   'insumo_nombre', i.nombre,
+                   'cantidad', dc.cantidad,
+                   'valor_unitario', dc.valor_unitario,
+                   'subtotal', dc.subtotal
+                 )
+               ) FILTER (WHERE dc.id_detalle_compra IS NOT NULL),
+               '[]'
+             ) AS detalles
+      FROM compra c
+      LEFT JOIN proveedor p ON c.id_proveedor = p.id_proveedor
+      LEFT JOIN usuario u ON c.id_usuario = u.id_usuario
+      LEFT JOIN detalle_compra dc ON c.id_compra = dc.id_compra
+      LEFT JOIN insumo i ON dc.id_insumo = i.id_insumo
+      GROUP BY c.id_compra, p.nombre, u.nombre
+      ORDER BY c.id_compra ASC
+    `);
+    return res.rows || [];
   }
 
   static async getById(id) {
@@ -75,7 +71,8 @@ export class ComprasService {
        RETURNING *`,
       [id_proveedor, id_usuario, fecha_compra, valor_total, medio_pago, comprobante_url, estado, id]
     );
-    return res.rows[0] || { id_compra: id, ...data };
+    if (!res.rows[0]) throw notFound('Compra no encontrada');
+    return res.rows[0];
   }
 
   /** Anula el registro (sin borrado físico: conserva el historial). */

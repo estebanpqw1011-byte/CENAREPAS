@@ -5,22 +5,17 @@ const ROLES_SISTEMA = ['Administrador', 'Secretaria', 'Vendedor', 'Cliente'];
 
 export class RolesService {
   static async getAll() {
-    try {
-      const res = await query(`
-        SELECT r.*, 
-               COALESCE(json_agg(p.id_permiso ORDER BY p.id_permiso) FILTER (WHERE p.id_permiso IS NOT NULL), '[]') AS permisos
-        FROM rol r
-        LEFT JOIN rol_permiso rp ON r.id_rol = rp.id_rol
-        LEFT JOIN permiso p ON rp.id_permiso = p.id_permiso
-        GROUP BY r.id_rol
-        ORDER BY r.id_rol ASC
-      `);
-      if (res.rows && res.rows.length > 0) return res.rows;
-      return [];
-    } catch (error) {
-      console.warn('[RolesService.getAll] Fallback:', error.message);
-      return [];
-    }
+    const res = await query(`
+      SELECT r.*, 
+             COALESCE(json_agg(p.id_permiso ORDER BY p.id_permiso) FILTER (WHERE p.id_permiso IS NOT NULL), '[]') AS permisos
+      FROM rol r
+      LEFT JOIN rol_permiso rp ON r.id_rol = rp.id_rol
+      LEFT JOIN permiso p ON rp.id_permiso = p.id_permiso
+      GROUP BY r.id_rol
+      ORDER BY r.id_rol ASC
+    `);
+    if (res.rows && res.rows.length > 0) return res.rows;
+    return [];
   }
 
   static async getById(id) {
@@ -92,7 +87,8 @@ export class RolesService {
          RETURNING *`,
         [nombre, descripcion, estado, id]
       );
-      const updatedRol = res.rows[0] || { id_rol: id, ...data };
+      const updatedRol = res.rows[0];
+      if (!updatedRol) throw notFound('Rol no encontrado');
 
       if (Array.isArray(permisos)) {
         const cleanPermisos = [...new Set(permisos.map(Number).filter((pId) => Number.isInteger(pId) && pId > 0))];

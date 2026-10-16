@@ -1,6 +1,6 @@
 import { query } from '../config/db.js';
 import { MUNICIPIOS_ENTREGA, TIPOS_DOCUMENTO } from '../config/negocio.js';
-import { badRequest, conflict } from '../utils/httpError.js';
+import { badRequest, conflict, notFound } from '../utils/httpError.js';
 import { eliminarSinAsociados } from '../utils/eliminacion.js';
 
 const texto = (valor) => (typeof valor === 'string' ? valor.trim() : '');
@@ -31,13 +31,8 @@ const ubicacionYDocumento = (data) => {
 
 export class ClientesService {
   static async getAll() {
-    try {
-      const res = await query('SELECT * FROM cliente ORDER BY id_cliente ASC');
-      return res.rows || [];
-    } catch (error) {
-      console.warn('[ClientesService.getAll] Fallback:', error.message);
-      return [];
-    }
+    const res = await query('SELECT * FROM cliente ORDER BY id_cliente ASC');
+    return res.rows || [];
   }
 
   static async getById(id) {
@@ -77,7 +72,8 @@ export class ClientesService {
       [nombre, documento, telefono, correo, direccion, estado, tipoDocumento ?? null,
         municipio !== undefined, municipio ?? null, barrio !== undefined, barrio ?? null, id]
     );
-    return res.rows[0] || { id_cliente: id, ...data };
+    if (!res.rows[0]) throw notFound('Cliente no encontrado');
+    return res.rows[0];
   }
 
   /** Inactiva el registro (sin borrado físico: conserva el historial). */

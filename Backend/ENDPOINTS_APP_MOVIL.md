@@ -157,6 +157,9 @@ Tipos de notificación: `pedido_creado`, `pedido_estado`, `abono_aprobado` y `ab
 | PUT | `/clientes/:id` con `estado` | editar (+ cambiar_estado si cambia) | **Modificado:** un `estado` igual al actual (sin distinguir mayúsculas) se ignora; uno distinto exige `clientes:cambiar_estado`, si no **403** "No tienes permiso para cambiar el estado del cliente". Pruebas: `npm run test:staging`. |
 | DELETE | compras y producción | anular | **Modificado:** anula |
 | DELETE | `/roles/:id` | roles:eliminar | **Modificado:** 409 si tiene usuarios o es un rol del sistema |
+| PUT | `/clientes/:id`, `/compras/:id`, `/fichas-tecnicas/:id`, `/insumos/:id`, `/produccion/:id`, `/proveedores/:id`, `/roles/:id`, `/sedes/:id` | editar | **Modificado (fix/guardado-bd):** **404** "… no encontrado/a" si el registro no existe. Antes respondían 200 con los datos enviados aunque no se actualizara nada. |
+| GET | `/clientes`, `/compras`, `/fichas-tecnicas`, `/insumos`, `/produccion`, `/proveedores`, `/roles`, `/sedes`, `/auditoria` | ver | **Modificado (fix/guardado-bd):** si la consulta falla, **500** "Error interno en el servidor" (con el error en el log). Antes respondían 200 con una lista vacía. |
+| POST | `/sedes` | sedes:crear | **Corregido (fix/guardado-bd):** sin `estado`, la sede nace `Activo`. Antes usaba `'activo'`, que viola `ck_sede_estado`, y respondía 400. |
 
 **Transiciones del pedido** (`config/negocio.js`):
 

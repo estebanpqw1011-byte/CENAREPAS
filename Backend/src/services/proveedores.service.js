@@ -1,14 +1,10 @@
 import { query } from '../config/db.js';
+import { notFound } from '../utils/httpError.js';
 
 export class ProveedoresService {
   static async getAll() {
-    try {
-      const res = await query('SELECT * FROM proveedor ORDER BY id_proveedor ASC');
-      return res.rows || [];
-    } catch (error) {
-      console.warn('[ProveedoresService.getAll] Fallback:', error.message);
-      return [];
-    }
+    const res = await query('SELECT * FROM proveedor ORDER BY id_proveedor ASC');
+    return res.rows || [];
   }
 
   static async getById(id) {
@@ -41,7 +37,8 @@ export class ProveedoresService {
        RETURNING *`,
       [nombre, nit, telefono, correo, direccion, estado, id]
     );
-    return res.rows[0] || { id_proveedor: id, ...data };
+    if (!res.rows[0]) throw notFound('Proveedor no encontrado');
+    return res.rows[0];
   }
 
   /** Inactiva el registro (sin borrado físico: conserva el historial). */
