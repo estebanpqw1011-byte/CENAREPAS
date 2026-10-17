@@ -16,23 +16,31 @@ export function getImageUrl(path) {
   return `${SERVER_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
-export async function apiRequest(endpoint, options = {}, fallbackFn = null) {
-  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-
-  // Retrieve token if present
-  let token = null;
+function getToken() {
   try {
     const rawUser = localStorage.getItem('user');
-    if (rawUser) {
-      const parsed = JSON.parse(rawUser);
-      token = parsed.token || null;
-    }
-    if (!token) {
-      token = localStorage.getItem('token');
-    }
-  } catch (e) {
-    // Ignore JSON parse errors
+    const token = rawUser ? JSON.parse(rawUser).token : null;
+    return token || localStorage.getItem('token');
+  } catch {
+    return null;
   }
+}
+
+/** Descarga un archivo protegido (con la sesión) y lo devuelve como Blob. */
+export async function apiBlob(endpoint) {
+  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const token = getToken();
+  const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw Object.assign(new Error(data?.message || `HTTP Error ${response.status}`), { status: response.status });
+  }
+  return response.blob();
+}
+
+export async function apiRequest(endpoint, options = {}, fallbackFn = null) {
+  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const token = getToken();
 
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
 

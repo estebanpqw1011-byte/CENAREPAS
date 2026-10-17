@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ShoppingCart, CheckCircle, XCircle, DollarSign } from 'lucide-react';
+import { ShoppingCart, CheckCircle, XCircle, DollarSign, ExternalLink, Download } from 'lucide-react';
 import { useCompras } from '../hooks/useCompras';
 import { getProveedores } from '../../proveedores/services/proveedoresService';
+import { getSoporteCompra } from '../services/comprasService';
 import { getUsuarios } from '../../usuarios/services/usuariosService';
 import { DataTable } from '../../../shared/components/DataTable';
 import { RowActions } from '../../../shared/components/RowActions';
@@ -16,6 +17,63 @@ import { CustomSelect } from '../../../shared/components/CustomSelect';
 import ErrorBanner from '../../../shared/components/ErrorBanner';
 import { exportToPdf } from '../../../shared/utils/exportToPdf';
 import { exportToExcel } from '../../../shared/utils/exportToExcel';
+
+/**
+ * Abre o descarga el soporte de una compra. El enlace se pide al hacer clic:
+ * las facturas son privadas (enlace temporal o archivo con la sesión).
+ */
+function SoporteCompra({ compra }) {
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
+
+  const usar = async (descargar) => {
+    setError('');
+    // La ventana se abre antes de esperar al servidor para que el navegador no la bloquee.
+    const ventana = descargar ? null : window.open('', '_blank');
+    setCargando(true);
+    try {
+      const { url, local } = await getSoporteCompra(compra.id_compra);
+      if (!url) throw new Error('No se encontró el soporte');
+      if (descargar) {
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = `soporte-compra-${compra.id_compra}`;
+        enlace.rel = 'noopener';
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+      } else if (ventana) {
+        ventana.opener = null;
+        ventana.location.href = url;
+      } else {
+        window.open(url, '_blank', 'noopener');
+      }
+      if (local) setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      ventana?.close();
+      setError(err.message || 'No se pudo abrir el soporte');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const boton = 'inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-50';
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={boton} disabled={cargando} onClick={() => usar(false)}>
+          <ExternalLink className="size-3.5" />
+          Abrir
+        </button>
+        <button type="button" className={boton} disabled={cargando} onClick={() => usar(true)}>
+          <Download className="size-3.5" />
+          Descargar
+        </button>
+      </div>
+      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
 
 export default function ComprasPage() {
   const { can } = usePermissions();
@@ -226,7 +284,7 @@ export default function ComprasPage() {
         },
         { header: 'Medio de Pago', key: 'medio_pago' },
         { header: 'Estado', key: 'estado', align: 'center' },
-        { header: 'Comprobante URL', key: 'comprobante_url' },
+        { header: 'Soporte', accessor: (c) => (c.comprobante_public_id || c.comprobante_url ? 'Adjunto' : 'Sin soporte') },
       ],
       title: 'Reporte de Órdenes de Compra',
       subtitle: 'Histórico de adquisiciones de materias primas a proveedores en CENAREPAS',
@@ -315,15 +373,8 @@ export default function ComprasPage() {
           },
           {
             label: 'Comprobante / Factura',
-            value: detailModal.data.comprobante_url ? (
-              <a
-                href={detailModal.data.comprobante_url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-primary hover:underline font-medium text-xs inline-flex items-center gap-1"
-              >
-                Ver comprobante adjunto
-              </a>
+            value: detailModal.data.comprobante_public_id || detailModal.data.comprobante_url ? (
+              <SoporteCompra compra={detailModal.data} />
             ) : (
               'Sin comprobante adjunto'
             ),
