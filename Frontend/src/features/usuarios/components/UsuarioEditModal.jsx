@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
-import { getRoles } from '../../roles/services/rolesService';
 import { Combobox } from '../../../shared/ui/Combobox';
+import { getOpcionesComo, conValorActual } from '../../../shared/services/opciones';
 
 export function UsuarioEditModal({ open, editData, setEditData, onClose, onSave, isSaving }) {
   const [roles, setRoles] = useState([]);
 
   useEffect(() => {
-    getRoles().then((data) => {
+    getOpcionesComo('roles', 'id_rol').then((data) => {
       if (Array.isArray(data)) setRoles(data);
     }).catch(() => {});
   }, []);
@@ -56,7 +56,7 @@ export function UsuarioEditModal({ open, editData, setEditData, onClose, onSave,
               name="id_rol"
               value={editData.id_rol}
               onChange={(e) => setEditData({ ...editData, id_rol: Number(e.target.value) })}
-              options={roles.map((r) => ({
+              options={conValorActual(roles, 'id_rol', editData?.id_rol, editData?.rol_nombre).map((r) => ({
                 value: r.id_rol,
                 label: r.nombre,
               }))}

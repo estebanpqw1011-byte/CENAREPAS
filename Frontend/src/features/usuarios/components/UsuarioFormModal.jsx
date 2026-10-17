@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Shield, Mail, Lock, User, CheckCircle2 } from 'lucide-react';
-import { getRoles } from '../../roles/services/rolesService';
 import { Combobox } from '../../../shared/ui/Combobox';
 import { StepperModal } from '../../../shared/components/StepperModal';
+import { getOpcionesComo, conValorActual } from '../../../shared/services/opciones';
 
 // Igual que CONTRASENA_MIN del backend (Backend/src/config/negocio.js).
 const CONTRASENA_MIN = 8;
@@ -17,7 +17,7 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    getRoles()
+    getOpcionesComo('roles', 'id_rol')
       .then((data) => {
         if (Array.isArray(data)) setRoles(data);
       })
@@ -205,7 +205,7 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
               name="id_rol"
               value={idRol}
               onChange={(e) => setIdRol(e.target.value)}
-              options={roles.map((r) => ({
+              options={conValorActual(roles, 'id_rol', usuario?.id_rol, usuario?.rol_nombre).map((r) => ({
                 value: String(r.id_rol),
                 label: r.nombre,
               }))}

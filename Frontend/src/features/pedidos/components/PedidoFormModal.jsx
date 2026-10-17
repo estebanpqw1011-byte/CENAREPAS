@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, ShoppingBag } from 'lucide-react';
-import { getClientes } from '../../clientes/services/clientesService';
-import { getProductos } from '../../productos/services/productosService';
-import { getSedes } from '../../sedes/services/sedesService';
 import { Combobox } from '../../../shared/ui/Combobox';
 import { StepperModal } from '../../../shared/components/StepperModal';
+import { getOpciones, getOpcionesComo, conValorActual } from '../../../shared/services/opciones';
 
 export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoading = false }) {
   const [idCliente, setIdCliente] = useState('1');
@@ -16,6 +14,7 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
   // Catálogos
   const [clientes, setClientes] = useState([]);
   const [sedes, setSedes] = useState([]);
+  const [estados, setEstados] = useState([]);
   const [availableProductos, setAvailableProductos] = useState([]);
 
   // Detalle de Pedido (detalle_pedido)
@@ -28,13 +27,16 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    getClientes().then((data) => {
+    getOpcionesComo('clientes', 'id_cliente').then((data) => {
       if (Array.isArray(data)) setClientes(data);
     }).catch(() => {});
-    getSedes().then((data) => {
+    getOpcionesComo('sedes', 'id_sede').then((data) => {
       if (Array.isArray(data)) setSedes(data);
     }).catch(() => {});
-    getProductos().then((data) => {
+    getOpciones('estados-pedido').then((data) => {
+      if (Array.isArray(data)) setEstados(data);
+    }).catch(() => {});
+    getOpcionesComo('productos', 'id_producto').then((data) => {
       if (Array.isArray(data)) setAvailableProductos(data);
     }).catch(() => {});
   }, []);
@@ -229,7 +231,7 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
                   setIdCliente(e.target.value);
                   if (errors.idCliente) setErrors((prev) => ({ ...prev, idCliente: null }));
                 }}
-                options={clientes.map((c) => ({
+                options={conValorActual(clientes, 'id_cliente', pedido?.id_cliente, pedido?.cliente_nombre).map((c) => ({
                   value: String(c.id_cliente),
                   label: c.nombre,
                 }))}
@@ -250,7 +252,7 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
                   setIdSede(e.target.value);
                   if (errors.idSede) setErrors((prev) => ({ ...prev, idSede: null }));
                 }}
-                options={sedes.map((s) => ({
+                options={conValorActual(sedes, 'id_sede', pedido?.id_sede, pedido?.sede_nombre).map((s) => ({
                   value: String(s.id_sede),
                   label: s.nombre,
                 }))}
@@ -283,13 +285,9 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
                 name="estado"
                 value={estado}
                 onChange={(e) => setEstado(e.target.value)}
-                options={[
-                  { value: 'Pendiente', label: 'Pendiente' },
-                  { value: 'En preparacion', label: 'En Preparación' },
-                  { value: 'Listo para entregar', label: 'Listo para Entregar' },
-                  { value: 'Entregado', label: 'Entregado' },
-                  { value: 'Anulado', label: 'Anulado' },
-                ]}
+                // Estados reales del pedido (GET /opciones/estados-pedido); el actual siempre aparece.
+                options={(estados.some((e) => e.id === estado) || !estado ? estados : [...estados, { id: estado, nombre: estado }])
+                  .map((e) => ({ value: e.id, label: e.nombre }))}
               />
             </div>
 

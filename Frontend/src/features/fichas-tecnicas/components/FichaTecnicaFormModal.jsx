@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Package, Clock, BookOpen } from 'lucide-react';
-import { getInsumos } from '../../insumos/services/insumosService';
 import { Combobox } from '../../../shared/ui/Combobox';
 import { StepperModal } from '../../../shared/components/StepperModal';
+import { getOpcionesComo } from '../../../shared/services/opciones';
 
 export function FichaTecnicaFormModal({ open, onClose, ficha = null, onSave, isLoading = false }) {
   const [nombre, setNombre] = useState('');
@@ -19,7 +19,7 @@ export function FichaTecnicaFormModal({ open, onClose, ficha = null, onSave, isL
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    getInsumos()
+    getOpcionesComo('insumos', 'id_insumo')
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) setAvailableInsumos(data);
       })

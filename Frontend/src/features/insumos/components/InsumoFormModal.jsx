@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Package, Calendar, Truck } from 'lucide-react';
-import { getProveedores } from '../../proveedores/services/proveedoresService';
 import { Combobox } from '../../../shared/ui/Combobox';
 import { StepperModal } from '../../../shared/components/StepperModal';
+import { getOpcionesComo, conValorActual } from '../../../shared/services/opciones';
 
 export function InsumoFormModal({ open, onClose, insumo = null, onSave, isLoading = false }) {
   const [nombre, setNombre] = useState('');
@@ -16,7 +16,7 @@ export function InsumoFormModal({ open, onClose, insumo = null, onSave, isLoadin
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    getProveedores()
+    getOpcionesComo('proveedores', 'id_proveedor')
       .then((data) => {
         if (Array.isArray(data)) setProveedores(data);
       })
@@ -167,7 +167,7 @@ export function InsumoFormModal({ open, onClose, insumo = null, onSave, isLoadin
               name="id_proveedor"
               value={idProveedor}
               onChange={(e) => setIdProveedor(e.target.value)}
-              options={proveedores.map((p) => ({
+              options={conValorActual(proveedores, 'id_proveedor', insumo?.id_proveedor, insumo?.proveedor_nombre).map((p) => ({
                 value: String(p.id_proveedor),
                 label: p.nombre,
               }))}

@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, Package } from 'lucide-react';
-import { getProveedores } from '../../proveedores/services/proveedoresService';
-import { getInsumos } from '../../insumos/services/insumosService';
 import { Combobox } from '../../../shared/ui/Combobox';
 import { StepperModal } from '../../../shared/components/StepperModal';
+import { getOpcionesComo, conValorActual } from '../../../shared/services/opciones';
 
 export function CompraFormModal({ open, onClose, compra = null, onSave, isLoading = false }) {
   const [fechaCompra, setFechaCompra] = useState('');
@@ -26,10 +25,10 @@ export function CompraFormModal({ open, onClose, compra = null, onSave, isLoadin
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    getProveedores().then((data) => {
+    getOpcionesComo('proveedores', 'id_proveedor').then((data) => {
       if (Array.isArray(data)) setProveedores(data);
     }).catch(() => {});
-    getInsumos().then((data) => {
+    getOpcionesComo('insumos', 'id_insumo').then((data) => {
       if (Array.isArray(data)) setAvailableInsumos(data);
     }).catch(() => {});
   }, []);
@@ -234,7 +233,7 @@ export function CompraFormModal({ open, onClose, compra = null, onSave, isLoadin
                   setIdProveedor(e.target.value);
                   if (errors.idProveedor) setErrors((prev) => ({ ...prev, idProveedor: null }));
                 }}
-                options={proveedores.map((p) => ({
+                options={conValorActual(proveedores, 'id_proveedor', compra?.id_proveedor, compra?.proveedor_nombre).map((p) => ({
                   value: String(p.id_proveedor),
                   label: p.nombre,
                 }))}

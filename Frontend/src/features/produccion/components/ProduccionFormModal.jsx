@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Factory, Plus, Trash2, Package, Calendar, UserCheck } from 'lucide-react';
-import { getFichasTecnicas, getFichaTecnicaInsumos } from '../../fichas-tecnicas/services/fichasTecnicasService';
-import { getInsumos } from '../../insumos/services/insumosService';
-import { getUsuarios } from '../../usuarios/services/usuariosService';
+import { getFichaTecnicaInsumos } from '../../fichas-tecnicas/services/fichasTecnicasService';
 import { Combobox } from '../../../shared/ui/Combobox';
 import { StepperModal } from '../../../shared/components/StepperModal';
+import { getOpcionesComo, conValorActual } from '../../../shared/services/opciones';
 
 export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoading = false }) {
   const [idFicha, setIdFicha] = useState('1');
@@ -23,17 +22,17 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    getFichasTecnicas()
+    getOpcionesComo('fichas-tecnicas', 'id_ficha')
       .then((data) => {
         if (Array.isArray(data)) setFichas(data);
       })
       .catch(() => {});
-    getInsumos()
+    getOpcionesComo('insumos', 'id_insumo')
       .then((data) => {
         if (Array.isArray(data)) setAvailableInsumos(data);
       })
       .catch(() => {});
-    getUsuarios()
+    getOpcionesComo('usuarios', 'id_usuario')
       .then((data) => {
         if (Array.isArray(data)) setUsuarios(data);
       })
@@ -217,7 +216,7 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
                 placeholder="Seleccionar receta base..."
                 value={idFicha}
                 onChange={(e) => setIdFicha(e.target.value)}
-                options={fichas.map((f) => ({
+                options={conValorActual(fichas, 'id_ficha', lote?.id_ficha, lote?.ficha_nombre).map((f) => ({
                   value: String(f.id_ficha),
                   label: f.nombre,
                 }))}
@@ -272,7 +271,7 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
                 name="id_usuario_responsable"
                 value={idUsuarioResponsable}
                 onChange={(e) => setIdUsuarioResponsable(e.target.value)}
-                options={usuarios.map((u) => ({
+                options={conValorActual(usuarios, 'id_usuario', lote?.id_usuario_responsable, lote?.responsable_nombre).map((u) => ({
                   value: String(u.id_usuario),
                   label: u.nombre,
                 }))}

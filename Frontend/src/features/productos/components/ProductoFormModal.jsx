@@ -1,12 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Upload, Trash2, Image as ImageIcon, Loader2, DollarSign, Box } from 'lucide-react';
-import { getCategorias } from '../../categorias/services/categoriasService';
-import { getFichasTecnicas } from '../../fichas-tecnicas/services/fichasTecnicasService';
-import { getProveedores } from '../../proveedores/services/proveedoresService';
 import { Combobox } from '../../../shared/ui/Combobox';
 import { uploadImage } from '../../../shared/services/uploadService';
 import { getImageUrl } from '../../../shared/services/api';
 import { StepperModal } from '../../../shared/components/StepperModal';
+import { getOpcionesComo, conValorActual } from '../../../shared/services/opciones';
 
 export function ProductoFormModal({ open, onClose, producto = null, onSave, isLoading = false }) {
   const [nombre, setNombre] = useState('');
@@ -31,17 +29,17 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
   const [proveedores, setProveedores] = useState([]);
 
   useEffect(() => {
-    getCategorias()
+    getOpcionesComo('categorias', 'id_categoria')
       .then((data) => {
         if (Array.isArray(data)) setCategorias(data);
       })
       .catch(() => {});
-    getFichasTecnicas()
+    getOpcionesComo('fichas-tecnicas', 'id_ficha')
       .then((data) => {
         if (Array.isArray(data)) setFichas(data);
       })
       .catch(() => {});
-    getProveedores()
+    getOpcionesComo('proveedores', 'id_proveedor')
       .then((data) => {
         if (Array.isArray(data)) setProveedores(data);
       })
@@ -246,7 +244,7 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
               name="id_categoria"
               value={idCategoria}
               onChange={(e) => setIdCategoria(e.target.value)}
-              options={categorias.map((cat) => ({
+              options={conValorActual(categorias, 'id_categoria', producto?.id_categoria, producto?.categoria_nombre).map((cat) => ({
                 value: String(cat.id_categoria),
                 label: cat.nombre,
               }))}
@@ -347,7 +345,7 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
               onChange={(e) => setIdFicha(e.target.value)}
               options={[
                 { value: '', label: 'Sin receta vinculada' },
-                ...fichas.map((f) => ({
+                ...conValorActual(fichas, 'id_ficha', producto?.id_ficha, producto?.ficha_nombre).map((f) => ({
                   value: String(f.id_ficha),
                   label: f.nombre,
                 })),
@@ -368,7 +366,7 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
               onChange={(e) => setIdProveedor(e.target.value)}
               options={[
                 { value: '', label: 'Sin proveedor asignado' },
-                ...proveedores.map((p) => ({
+                ...conValorActual(proveedores, 'id_proveedor', producto?.id_proveedor, producto?.proveedor_nombre).map((p) => ({
                   value: String(p.id_proveedor),
                   label: p.nombre,
                 })),
