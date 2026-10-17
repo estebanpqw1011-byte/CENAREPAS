@@ -28,7 +28,7 @@ const RECURSOS = {
     permisos: [['productos', 'ver'], ...editar('pedidos')],
   },
   proveedores: {
-    sql: `SELECT id_proveedor AS id, nombre, nit AS documento FROM proveedor WHERE estado = 'Activo' ORDER BY nombre`,
+    sql: `SELECT id_proveedor AS id, nombre, tipo_documento, nit AS documento FROM proveedor WHERE estado = 'Activo' ORDER BY nombre`,
     permisos: [['proveedores', 'ver'], ...editar('compras'), ...editar('insumos'), ...editar('productos')],
   },
   insumos: {

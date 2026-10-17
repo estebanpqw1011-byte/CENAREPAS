@@ -1,6 +1,6 @@
 -- ============================================================================
 -- CENAREPAS - Script Consolidado de Base de Datos
--- Versión: 2.0 (Consolidación cenarepas_db + Migraciones 001 a 011)
+-- Versión: 2.1 (Consolidación cenarepas_db + Migraciones 001 a 012)
 -- Esquema: cenarepas
 -- Motor: PostgreSQL 14+ (probado en PostgreSQL 18)
 --
@@ -25,7 +25,7 @@
 -- uso): en ese caso no cambia nada. Las bases existentes se actualizan con las
 -- migraciones de Base_Datos/migraciones/, no con este script.
 --
--- FUENTE: es el resultado de cenarepas_db + migraciones 001 a 011. Se verifica
+-- FUENTE: es el resultado de cenarepas_db + migraciones 001 a 012. Se verifica
 -- con pg_dump --schema-only frente a cenarepas_staging (sin diferencias) y con
 -- Base_Datos/herramientas/comparar_esquemas.js.
 -- ============================================================================
@@ -109,11 +109,15 @@ CREATE TABLE IF NOT EXISTS usuario (
     token_expiracion      TIMESTAMP,
     fecha_creacion        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     recuperacion_intentos INTEGER      NOT NULL DEFAULT 0,
+    tipo_documento        VARCHAR(5),
+    documento             VARCHAR(20),
     CONSTRAINT uq_usuario_correo UNIQUE (correo),
     CONSTRAINT fk_usuario_rol FOREIGN KEY (id_rol)
         REFERENCES rol (id_rol) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT ck_usuario_estado CHECK (estado::text = ANY (ARRAY['Activo'::varchar::text, 'Inactivo'::varchar::text])),
-    CONSTRAINT ck_usuario_recuperacion_intentos CHECK (recuperacion_intentos >= 0)
+    CONSTRAINT ck_usuario_recuperacion_intentos CHECK (recuperacion_intentos >= 0),
+    CONSTRAINT ck_usuario_tipodocumento CHECK (tipo_documento IS NULL OR tipo_documento IN ('CC', 'CE', 'NIT', 'PP', 'TI')),
+    CONSTRAINT ck_usuario_documento_completo CHECK ((tipo_documento IS NULL) = (documento IS NULL))
 );
 COMMENT ON TABLE usuario IS 'HU-013 a HU-024: cuentas de acceso al sistema (Administrador/Secretaria/Vendedor)';
 COMMENT ON COLUMN usuario.token_recuperacion IS 'CA-003/CA-024: token temporal para recuperación de contraseña';
@@ -146,9 +150,17 @@ CREATE TABLE IF NOT EXISTS proveedor (
     direccion         VARCHAR(255),
     estado            VARCHAR(10)  NOT NULL DEFAULT 'Activo',
     fecha_creacion    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    tipo_documento   VARCHAR(5)   NOT NULL DEFAULT 'NIT',
+    tipo_persona     VARCHAR(10)  NOT NULL DEFAULT 'Jurídica',
+    nombres          VARCHAR(75),
+    apellidos        VARCHAR(74),
+    razon_social     VARCHAR(150),
     CONSTRAINT uq_proveedor_nit UNIQUE (nit),
-    CONSTRAINT ck_proveedor_estado CHECK (estado::text = ANY (ARRAY['Activo'::varchar::text, 'Inactivo'::varchar::text]))
+    CONSTRAINT ck_proveedor_estado CHECK (estado::text = ANY (ARRAY['Activo'::varchar::text, 'Inactivo'::varchar::text])),
+    CONSTRAINT ck_proveedor_tipodocumento CHECK (tipo_documento IN ('CC', 'CE', 'NIT', 'PP', 'TI')),
+    CONSTRAINT ck_proveedor_tipopersona CHECK (tipo_persona IN ('Natural', 'Jurídica'))
 );
+COMMENT ON COLUMN proveedor.nit IS 'Número de documento del proveedor (su tipo está en tipo_documento)';
 COMMENT ON TABLE proveedor IS 'HU-025 a HU-033: solo se inactiva, no se elimina si tiene compras asociadas (CA-030-002)';
 
 -- ----------------------------------------------------------------------------
@@ -181,6 +193,7 @@ CREATE TABLE IF NOT EXISTS categoria_producto (
     descripcion       VARCHAR(255),
     estado            VARCHAR(10)  NOT NULL DEFAULT 'Activo',
     imagen_url        VARCHAR(255),
+    imagen_public_id VARCHAR(255),
     CONSTRAINT uq_categoria_nombre UNIQUE (nombre),
     CONSTRAINT ck_categoria_estado CHECK (estado::text = ANY (ARRAY['Activo'::varchar::text, 'Inactivo'::varchar::text]))
 );
@@ -238,6 +251,7 @@ CREATE TABLE IF NOT EXISTS producto (
     stock_minimo      NUMERIC(12,2) NOT NULL DEFAULT 0,
     fecha_vencimiento DATE,
     estado            VARCHAR(10)   NOT NULL DEFAULT 'Activo',
+    imagen_public_id VARCHAR(255),
     CONSTRAINT uq_producto_nombre UNIQUE (nombre),
     CONSTRAINT fk_producto_categoria FOREIGN KEY (id_categoria)
         REFERENCES categoria_producto (id_categoria) ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -265,13 +279,16 @@ CREATE TABLE IF NOT EXISTS compra (
     comprobante_url   VARCHAR(255),
     estado            VARCHAR(15)   NOT NULL DEFAULT 'Registrada',
     fecha_registro    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    comprobante_public_id VARCHAR(255),
+    comprobante_recurso   VARCHAR(10),
     CONSTRAINT fk_compra_proveedor FOREIGN KEY (id_proveedor)
         REFERENCES proveedor (id_proveedor) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_compra_usuario FOREIGN KEY (id_usuario)
         REFERENCES usuario (id_usuario) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT ck_compra_total CHECK (valor_total >= 0),
     CONSTRAINT ck_compra_mediopago CHECK (medio_pago::text = ANY (ARRAY['Efectivo'::varchar::text, 'Transferencia'::varchar::text, 'Credito'::varchar::text, 'Tarjeta'::varchar::text])),
-    CONSTRAINT ck_compra_estado CHECK (estado::text = ANY (ARRAY['Registrada'::varchar::text, 'Anulada'::varchar::text]))
+    CONSTRAINT ck_compra_estado CHECK (estado::text = ANY (ARRAY['Registrada'::varchar::text, 'Anulada'::varchar::text])),
+    CONSTRAINT ck_compra_comprobante_recurso CHECK (comprobante_recurso IS NULL OR comprobante_recurso IN ('image', 'raw'))
 );
 COMMENT ON TABLE compra IS 'HU-034 a HU-044: no se elimina, solo se anula (CA-039-001) conservando trazabilidad';
 COMMENT ON COLUMN compra.comprobante_url IS 'CA-042: factura en PDF o imagen (HU-042)';
@@ -350,12 +367,17 @@ CREATE TABLE IF NOT EXISTS cliente (
     tipo_documento    VARCHAR(5)   NOT NULL DEFAULT 'CC',
     municipio         VARCHAR(60),
     barrio            VARCHAR(80),
+    tipo_persona     VARCHAR(10)  NOT NULL DEFAULT 'Natural',
+    nombres          VARCHAR(75),
+    apellidos        VARCHAR(74),
+    razon_social     VARCHAR(150),
     CONSTRAINT uq_cliente_documento UNIQUE (documento),
     CONSTRAINT uq_cliente_usuario UNIQUE (id_usuario),
     CONSTRAINT fk_cliente_usuario FOREIGN KEY (id_usuario)
         REFERENCES usuario (id_usuario) ON DELETE RESTRICT,
     CONSTRAINT ck_cliente_estado CHECK (estado::text = ANY (ARRAY['Activo'::varchar::text, 'Inactivo'::varchar::text])),
-    CONSTRAINT ck_cliente_tipodocumento CHECK (tipo_documento IN ('CC', 'CE', 'NIT', 'PP', 'TI'))
+    CONSTRAINT ck_cliente_tipodocumento CHECK (tipo_documento IN ('CC', 'CE', 'NIT', 'PP', 'TI')),
+    CONSTRAINT ck_cliente_tipopersona CHECK (tipo_persona IN ('Natural', 'Jurídica'))
 );
 COMMENT ON TABLE cliente IS 'HU-099 a HU-105: tiendas, supermercados y clientes al detal';
 
@@ -646,6 +668,7 @@ CREATE INDEX IF NOT EXISTS idx_usuario_nombre ON usuario USING gin (nombre gin_t
 
 -- Índices únicos insensibles a mayúsculas para correos electrónicos (CA-150-002)
 CREATE UNIQUE INDEX IF NOT EXISTS ux_usuario_correo_lower ON usuario (LOWER(correo));
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usuario_documento ON usuario (documento) WHERE documento IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_cliente_correo_lower ON cliente (LOWER(correo)) WHERE correo IS NOT NULL;
 
 -- ============================================================================

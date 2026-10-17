@@ -5,6 +5,8 @@ const MENSAJES_UNIQUE = {
   uq_usuario_correo: 'Ya existe un usuario registrado con ese correo',
   ux_usuario_correo_lower: 'Ya existe un usuario registrado con ese correo',
   uq_cliente_documento: 'Ya existe un cliente registrado con ese número de documento',
+  uq_proveedor_nit: 'Ya existe un proveedor registrado con ese número de documento',
+  ux_usuario_documento: 'Ya existe un usuario registrado con ese número de documento',
   ux_cliente_correo_lower: 'Ya existe un cliente registrado con ese correo',
   uq_cliente_usuario: 'El usuario ya está vinculado a un cliente',
   uq_credito_pedido: 'El pedido ya tiene un crédito',

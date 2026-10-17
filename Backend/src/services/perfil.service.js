@@ -3,6 +3,7 @@ import { query } from '../config/db.js';
 import { enTransaccion } from '../utils/transaccion.js';
 import { badRequest, conflict, notFound } from '../utils/httpError.js';
 import { validarFichaCliente } from '../utils/fichaCliente.js';
+import { armarPersona } from '../utils/persona.js';
 import { texto } from '../utils/normalizar.js';
 import { CONTRASENA_MIN, MUNICIPIOS_ENTREGA } from '../config/negocio.js';
 
@@ -43,7 +44,11 @@ export class PerfilService {
 
     await enTransaccion(async (db) => {
       await db.query(
-        `UPDATE cliente SET nombre = $1, telefono = $2, direccion = $3, municipio = $4, barrio = $5
+        // El perfil edita un solo "nombre": Natural → nombres (sin apellidos aparte); Jurídica → razón social.
+        `UPDATE cliente SET nombre = $1, telefono = $2, direccion = $3, municipio = $4, barrio = $5,
+                nombres = CASE WHEN tipo_persona = 'Jurídica' THEN NULL ELSE $1 END,
+                apellidos = NULL,
+                razon_social = CASE WHEN tipo_persona = 'Jurídica' THEN $1 ELSE NULL END
          WHERE id_usuario = $6`,
         [nombre, telefono, direccion, municipio, barrio, idUsuario]
       );
@@ -61,14 +66,18 @@ export class PerfilService {
     const { valores, errores } = validarFichaCliente(datos);
     if (Object.keys(errores).length > 0) throw badRequest('Revisa los datos del perfil', errores);
     const { nombre, tipoDocumento, documento, telefono, municipio, barrio, direccion } = valores;
+    // Tipo de persona y nombres o razón social (Jurídica si el documento es NIT).
+    const { valores: persona } = armarPersona({ nombre }, {}, { tipoDocumento });
 
     await enTransaccion(async (db) => {
       const existe = await db.query('SELECT 1 FROM cliente WHERE id_usuario = $1', [usuario.id_usuario]);
       if (existe.rows.length > 0) throw conflict('Tu perfil ya está completo');
       await db.query(
-        `INSERT INTO cliente (nombre, tipo_documento, documento, telefono, correo, direccion, municipio, barrio, estado, id_usuario)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Activo', $9)`,
-        [nombre, tipoDocumento, documento, telefono, usuario.correo, direccion, municipio, barrio, usuario.id_usuario]
+        `INSERT INTO cliente (nombre, tipo_documento, documento, telefono, correo, direccion, municipio, barrio, estado, id_usuario,
+                              tipo_persona, nombres, apellidos, razon_social)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Activo', $9, $10, $11, $12, $13)`,
+        [nombre, tipoDocumento, documento, telefono, usuario.correo, direccion, municipio, barrio, usuario.id_usuario,
+          persona.tipo_persona, persona.nombres, persona.apellidos, persona.razon_social]
       );
       await db.query('UPDATE usuario SET nombre = $1 WHERE id_usuario = $2', [nombre, usuario.id_usuario]);
     });

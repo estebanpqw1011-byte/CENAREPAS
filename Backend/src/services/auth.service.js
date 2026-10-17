@@ -4,6 +4,7 @@ import { generateToken } from '../utils/jwt.js';
 import { HttpError, badRequest, conflict } from '../utils/httpError.js';
 import { CONTRASENA_MIN } from '../config/negocio.js';
 import { validarFichaCliente } from '../utils/fichaCliente.js';
+import { armarPersona } from '../utils/persona.js';
 
 const SALT_ROUNDS = 10;
 const CORREO_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -79,6 +80,8 @@ export class AuthService {
   static async registrarCliente(datos) {
     const { valores, errores } = validarFichaCliente(datos);
     const { nombre, tipoDocumento, documento, telefono, municipio, barrio, direccion } = valores;
+    // Tipo de persona y nombres o razón social (Jurídica si el documento es NIT).
+    const { valores: persona } = armarPersona({ nombre }, {}, { tipoDocumento });
     const correo = texto(datos.correo).toLowerCase();
     const contrasena = typeof datos.contrasena === 'string' ? datos.contrasena : '';
 
@@ -120,10 +123,12 @@ export class AuthService {
       const nuevoUsuario = usuario.rows[0];
 
       const cliente = await client.query(
-        `INSERT INTO cliente (nombre, tipo_documento, documento, telefono, correo, direccion, municipio, barrio, estado, id_usuario)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Activo', $9)
+        `INSERT INTO cliente (nombre, tipo_documento, documento, telefono, correo, direccion, municipio, barrio, estado, id_usuario,
+                              tipo_persona, nombres, apellidos, razon_social)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Activo', $9, $10, $11, $12, $13)
          RETURNING id_cliente`,
-        [nombre, tipoDocumento, documento, telefono, correo, direccion, municipio, barrio, nuevoUsuario.id_usuario]
+        [nombre, tipoDocumento, documento, telefono, correo, direccion, municipio, barrio, nuevoUsuario.id_usuario,
+          persona.tipo_persona, persona.nombres, persona.apellidos, persona.razon_social]
       );
 
       await client.query('COMMIT');

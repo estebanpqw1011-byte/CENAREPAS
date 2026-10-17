@@ -2,6 +2,7 @@ import { query } from '../config/db.js';
 import { MUNICIPIOS_ENTREGA, TIPOS_DOCUMENTO } from '../config/negocio.js';
 import { badRequest, conflict, notFound } from '../utils/httpError.js';
 import { eliminarSinAsociados } from '../utils/eliminacion.js';
+import { armarPersona, tocaPersona } from '../utils/persona.js';
 
 const texto = (valor) => (typeof valor === 'string' ? valor.trim() : '');
 
@@ -41,20 +42,35 @@ export class ClientesService {
   }
 
   static async create(data) {
-    const { nombre, documento, telefono, correo, direccion, estado = 'Activo' } = data;
-    const { tipoDocumento = 'CC', municipio = null, barrio = null } = ubicacionYDocumento(data);
+    const { documento, telefono, correo, direccion, estado = 'Activo' } = data;
+    const { tipoDocumento: tipoEnviado, municipio = null, barrio = null } = ubicacionYDocumento(data);
+    // Tipo de persona: Natural (nombres + apellidos) o Jurídica (razón social; NIT por defecto).
+    const { valores: persona, errores } = armarPersona(data, {}, { tipoDocumento: tipoEnviado });
+    if (Object.keys(errores).length > 0) throw badRequest('Revisa los datos del cliente', errores);
+    const tipoDocumento = tipoEnviado ?? (persona.tipo_persona === 'Jurídica' ? 'NIT' : 'CC');
     const res = await query(
-      `INSERT INTO cliente (nombre, tipo_documento, documento, telefono, correo, direccion, municipio, barrio, estado)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO cliente (nombre, tipo_documento, documento, telefono, correo, direccion, municipio, barrio, estado,
+                            tipo_persona, nombres, apellidos, razon_social)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
-      [nombre, tipoDocumento, documento, telefono, correo, direccion, municipio, barrio, estado]
+      [persona.nombre, tipoDocumento, documento, telefono, correo, direccion, municipio, barrio, estado,
+        persona.tipo_persona, persona.nombres, persona.apellidos, persona.razon_social]
     );
     return res.rows[0];
   }
 
   static async update(id, data) {
-    const { nombre, documento, telefono, correo, direccion, estado } = data;
+    const { documento, telefono, correo, direccion, estado } = data;
     const { tipoDocumento, municipio, barrio } = ubicacionYDocumento(data);
+    // Nombre y tipo de persona: solo si la petición los trae (si no, se conservan).
+    let persona = null;
+    if (tocaPersona(data)) {
+      const actual = await this.getById(id);
+      if (!actual) throw notFound('Cliente no encontrado');
+      const armado = armarPersona(data, actual, { tipoDocumento: tipoDocumento ?? actual.tipo_documento });
+      if (Object.keys(armado.errores).length > 0) throw badRequest('Revisa los datos del cliente', armado.errores);
+      persona = armado.valores;
+    }
     // municipio y barrio: sin enviar → se conservan; enviados vacíos → se borran.
     const res = await query(
       `UPDATE cliente
@@ -66,11 +82,17 @@ export class ClientesService {
            estado = COALESCE($6, estado),
            tipo_documento = COALESCE($7, tipo_documento),
            municipio = CASE WHEN $8::boolean THEN $9 ELSE municipio END,
-           barrio = CASE WHEN $10::boolean THEN $11 ELSE barrio END
+           barrio = CASE WHEN $10::boolean THEN $11 ELSE barrio END,
+           tipo_persona = CASE WHEN $13::boolean THEN $14 ELSE tipo_persona END,
+           nombres = CASE WHEN $13::boolean THEN $15 ELSE nombres END,
+           apellidos = CASE WHEN $13::boolean THEN $16 ELSE apellidos END,
+           razon_social = CASE WHEN $13::boolean THEN $17 ELSE razon_social END
        WHERE id_cliente = $12
        RETURNING *`,
-      [nombre, documento, telefono, correo, direccion, estado, tipoDocumento ?? null,
-        municipio !== undefined, municipio ?? null, barrio !== undefined, barrio ?? null, id]
+      [persona?.nombre ?? null, documento, telefono, correo, direccion, estado, tipoDocumento ?? null,
+        municipio !== undefined, municipio ?? null, barrio !== undefined, barrio ?? null, id,
+        persona !== null, persona?.tipo_persona ?? null, persona?.nombres ?? null, persona?.apellidos ?? null,
+        persona?.razon_social ?? null]
     );
     if (!res.rows[0]) throw notFound('Cliente no encontrado');
     return res.rows[0];

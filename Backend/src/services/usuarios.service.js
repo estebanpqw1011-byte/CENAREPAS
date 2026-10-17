@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { query } from '../config/db.js';
-import { CONTRASENA_MIN } from '../config/negocio.js';
+import { CONTRASENA_MIN, TIPOS_DOCUMENTO } from '../config/negocio.js';
 import { badRequest, conflict } from '../utils/httpError.js';
 import { eliminarSinAsociados } from '../utils/eliminacion.js';
 
@@ -8,14 +8,31 @@ const SALT_ROUNDS = 10;
 // f: el mínimo del personal pasa de 6 a CONTRASENA_MIN (8). Solo aplica a
 // contraseñas nuevas o cambiadas; el login no valida la longitud.
 // El formulario web de usuarios (UsuarioFormModal.jsx) usa el mismo mínimo.
-const COLUMNAS_PUBLICAS = 'id_usuario, nombre, correo, id_rol, estado, fecha_creacion';
+const COLUMNAS_PUBLICAS = 'id_usuario, nombre, correo, id_rol, estado, fecha_creacion, tipo_documento, documento';
+
+/**
+ * Tipo y número de documento del usuario (opcionales, pero los dos o ninguno).
+ * undefined = no se envió (al editar se conservan); null = se borran.
+ */
+const documentoDe = (data) => {
+  const enviado = data.tipo_documento !== undefined || data.documento !== undefined;
+  if (!enviado) return undefined;
+  const tipo = String(data.tipo_documento ?? '').trim().toUpperCase();
+  const numero = String(data.documento ?? '').trim();
+  if (!tipo && !numero) return { tipo: null, numero: null };
+  const errores = {};
+  if (!TIPOS_DOCUMENTO.includes(tipo)) errores.tipo_documento = 'Selecciona un tipo de documento válido';
+  if (!/^[0-9A-Za-z.-]{5,20}$/.test(numero)) errores.documento = 'Ingresa un número de documento válido (5 a 20 caracteres)';
+  if (Object.keys(errores).length > 0) throw badRequest('Revisa los datos del usuario', errores);
+  return { tipo, numero };
+};
 
 export class UsuariosService {
   /** resumido: solo id, nombre y rol (para quien no administra usuarios). */
   static async getAll({ resumido = false } = {}) {
     const res = await query(`
       SELECT u.id_usuario, u.nombre, u.correo, u.id_rol, u.estado,
-             u.fecha_creacion,
+             u.fecha_creacion, u.tipo_documento, u.documento,
              r.nombre AS rol_nombre
       FROM usuario u
       LEFT JOIN rol r ON u.id_rol = r.id_rol
@@ -30,7 +47,7 @@ export class UsuariosService {
   static async getById(id) {
     const res = await query(`
       SELECT u.id_usuario, u.nombre, u.correo, u.id_rol, u.estado, u.fecha_creacion,
-             r.nombre AS rol_nombre
+             u.tipo_documento, u.documento, r.nombre AS rol_nombre
       FROM usuario u
       LEFT JOIN rol r ON u.id_rol = r.id_rol
       WHERE u.id_usuario = $1
@@ -44,13 +61,14 @@ export class UsuariosService {
     if (rawPassword.length < CONTRASENA_MIN) {
       throw badRequest(`La contraseña debe tener al menos ${CONTRASENA_MIN} caracteres`);
     }
+    const documento = documentoDe(data);
     const contrasena_hash = await bcrypt.hash(rawPassword, SALT_ROUNDS);
 
     const res = await query(
-      `INSERT INTO usuario (nombre, correo, contrasena_hash, id_rol, estado)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO usuario (nombre, correo, contrasena_hash, id_rol, estado, tipo_documento, documento)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING ${COLUMNAS_PUBLICAS}`,
-      [nombre, correo, contrasena_hash, id_rol, estado]
+      [nombre, correo, contrasena_hash, id_rol, estado, documento?.tipo ?? null, documento?.numero ?? null]
     );
     return res.rows[0];
   }
@@ -63,6 +81,7 @@ export class UsuariosService {
       throw badRequest(`La contraseña debe tener al menos ${CONTRASENA_MIN} caracteres`);
     }
     const contrasena_hash = hasNewPassword ? await bcrypt.hash(rawPassword.trim(), SALT_ROUNDS) : null;
+    const documento = documentoDe(data);
 
     const res = await query(
       `UPDATE usuario 
@@ -70,10 +89,13 @@ export class UsuariosService {
            correo = COALESCE($2, correo),
            id_rol = COALESCE($3, id_rol),
            estado = COALESCE($4, estado),
-           contrasena_hash = COALESCE($5, contrasena_hash)
+           contrasena_hash = COALESCE($5, contrasena_hash),
+           tipo_documento = CASE WHEN $7::boolean THEN $8 ELSE tipo_documento END,
+           documento = CASE WHEN $7::boolean THEN $9 ELSE documento END
        WHERE id_usuario = $6
        RETURNING ${COLUMNAS_PUBLICAS}`,
-      [nombre, correo, id_rol, estado, contrasena_hash, id]
+      [nombre, correo, id_rol, estado, contrasena_hash, id,
+        documento !== undefined, documento?.tipo ?? null, documento?.numero ?? null]
     );
     return res.rows[0] || null;
   }
