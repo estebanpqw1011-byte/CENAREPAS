@@ -9,6 +9,24 @@ export const MUNICIPIOS_ENTREGA = [
 
 export const TIPOS_DOCUMENTO = ['CC', 'CE', 'NIT', 'PP', 'TI'];
 
+/** Nombre de cada tipo de documento (igual que GET /opciones/tipos-documento). */
+export const NOMBRES_DOCUMENTO = {
+  CC: 'Cédula de ciudadanía',
+  CE: 'Cédula de extranjería',
+  NIT: 'NIT',
+  PP: 'Pasaporte',
+  TI: 'Tarjeta de identidad',
+};
+
+/** Opciones para un selector de tipo de documento. */
+export const OPCIONES_TIPO_DOCUMENTO = TIPOS_DOCUMENTO.map((t) => ({ value: t, label: t === 'NIT' ? 'NIT' : `${t} · ${NOMBRES_DOCUMENTO[t]}` }));
+
+/** Número de documento: 5 a 20 letras, números, puntos o guiones (igual que el backend). */
+export const DOCUMENTO_VALIDO = /^[0-9A-Za-z.-]{5,20}$/;
+
+/** Tipos de persona de clientes y proveedores. Jurídica: NIT y razón social. */
+export const TIPOS_PERSONA = ['Natural', 'Jurídica'];
+
 /** Sede de los pedidos del cliente: el backend la asigna sola (SEDE_PEDIDOS_CLIENTE). */
 export const SEDE_PEDIDOS_CLIENTE = 'Aranjuez';
 

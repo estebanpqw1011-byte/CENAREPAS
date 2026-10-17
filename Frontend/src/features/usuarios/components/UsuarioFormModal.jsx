@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Shield, Mail, Lock, User, CheckCircle2 } from 'lucide-react';
+import { Shield, Mail, Lock, User, CheckCircle2, IdCard } from 'lucide-react';
 import { Combobox } from '../../../shared/ui/Combobox';
 import { StepperModal } from '../../../shared/components/StepperModal';
 import { getOpcionesComo, conValorActual } from '../../../shared/services/opciones';
+import { OPCIONES_TIPO_DOCUMENTO, DOCUMENTO_VALIDO } from '../../../shared/config/negocio';
 
 // Igual que CONTRASENA_MIN del backend (Backend/src/config/negocio.js).
 const CONTRASENA_MIN = 8;
@@ -10,6 +11,8 @@ const CONTRASENA_MIN = 8;
 export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoading = false }) {
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
+  const [tipoDocumento, setTipoDocumento] = useState('CC');
+  const [documento, setDocumento] = useState('');
   const [idRol, setIdRol] = useState('1');
   const [contrasena, setContrasena] = useState('');
   const [estado, setEstado] = useState('Activo');
@@ -30,12 +33,16 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
       if (usuario) {
         setNombre(usuario.nombre || '');
         setCorreo(usuario.correo || '');
+        setTipoDocumento(usuario.tipo_documento || 'CC');
+        setDocumento(usuario.documento || '');
         setIdRol(usuario.id_rol ? String(usuario.id_rol) : '1');
         setContrasena('');
         setEstado(usuario.estado || 'Activo');
       } else {
         setNombre('');
         setCorreo('');
+        setTipoDocumento('CC');
+        setDocumento('');
         setIdRol(roles[0]?.id_rol ? String(roles[0].id_rol) : '1');
         setContrasena('');
         setEstado('Activo');
@@ -48,16 +55,18 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
   const isDirty = useMemo(() => {
     if (!open) return false;
     if (!usuario) {
-      return nombre.trim() !== '' || correo.trim() !== '' || contrasena.trim() !== '';
+      return nombre.trim() !== '' || correo.trim() !== '' || documento.trim() !== '' || contrasena.trim() !== '';
     }
     return (
       nombre !== (usuario.nombre || '') ||
       correo !== (usuario.correo || '') ||
+      documento !== (usuario.documento || '') ||
+      (documento !== '' && tipoDocumento !== (usuario.tipo_documento || 'CC')) ||
       idRol !== String(usuario.id_rol || '1') ||
       estado !== (usuario.estado || 'Activo') ||
       contrasena.trim() !== ''
     );
-  }, [open, usuario, nombre, correo, idRol, estado, contrasena]);
+  }, [open, usuario, nombre, correo, tipoDocumento, documento, idRol, estado, contrasena]);
 
   const validateStep1 = useCallback(() => {
     if (!nombre.trim()) {
@@ -73,8 +82,12 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
     if (!emailRegex.test(correo.trim())) {
       return 'Por favor ingresa un correo electrónico válido.';
     }
+    // El documento es opcional; si se escribe, debe ser válido.
+    if (documento.trim() && !DOCUMENTO_VALIDO.test(documento.trim())) {
+      return 'El número de documento debe tener de 5 a 20 letras, números, puntos o guiones.';
+    }
     return true;
-  }, [nombre, correo]);
+  }, [nombre, correo, documento]);
 
   const validateStep2 = useCallback(() => {
     if (!usuario && !contrasena.trim()) {
@@ -98,11 +111,17 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
       return;
     }
 
+    // Sin número, el documento queda vacío (tipo y número van juntos).
+    const documentoPayload = documento.trim()
+      ? { tipo_documento: tipoDocumento, documento: documento.trim() }
+      : { tipo_documento: null, documento: null };
+
     const payload = usuario
       ? {
           ...usuario,
           nombre: nombre.trim(),
           correo: correo.trim(),
+          ...documentoPayload,
           id_rol: Number(idRol) || 1,
           estado,
           ...(contrasena.trim() ? { contrasena_hash: contrasena.trim() } : {}),
@@ -110,6 +129,7 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
       : {
           nombre: nombre.trim(),
           correo: correo.trim(),
+          ...documentoPayload,
           id_rol: Number(idRol) || 1,
           estado: estado || 'Activo',
           contrasena_hash: contrasena.trim() || 'defaultHash',
@@ -120,13 +140,13 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
     } else {
       onClose();
     }
-  }, [validateStep1, validateStep2, usuario, nombre, correo, idRol, estado, contrasena, onSave, onClose]);
+  }, [validateStep1, validateStep2, usuario, nombre, correo, tipoDocumento, documento, idRol, estado, contrasena, onSave, onClose]);
 
   const steps = useMemo(() => [
     {
       id: 'datos-personales',
       title: 'Datos personales',
-      description: 'Nombre completo y correo electrónico de contacto',
+      description: 'Nombre completo, documento y correo electrónico de contacto',
       validate: validateStep1,
       content: (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
@@ -152,6 +172,40 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
             <p className="text-[11px] text-muted-foreground mt-1">
               Nombre y apellido para identificación del usuario en el sistema.
             </p>
+          </div>
+
+          {/* Tipo de documento */}
+          <div className="sm:col-span-1">
+            <label htmlFor="usuario_tipo_documento" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Tipo de documento
+            </label>
+            <Combobox
+              id="usuario_tipo_documento"
+              name="tipo_documento"
+              value={tipoDocumento}
+              onChange={(e) => setTipoDocumento(e.target.value)}
+              options={OPCIONES_TIPO_DOCUMENTO}
+            />
+          </div>
+
+          {/* Número de documento */}
+          <div className="sm:col-span-1">
+            <label htmlFor="usuario_documento" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Número de documento <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
+            </label>
+            <div className="relative">
+              <IdCard className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <input
+                id="usuario_documento"
+                name="documento"
+                type="text"
+                maxLength={20}
+                placeholder="Ej. 1020304050"
+                value={documento}
+                onChange={(e) => setDocumento(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+              />
+            </div>
           </div>
 
           {/* Correo */}
@@ -263,7 +317,7 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
         </div>
       ),
     },
-  ], [nombre, correo, idRol, estado, contrasena, roles, usuario, validateStep1, validateStep2]);
+  ], [nombre, correo, tipoDocumento, documento, idRol, estado, contrasena, roles, usuario, validateStep1, validateStep2]);
 
   return (
     <StepperModal

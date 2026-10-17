@@ -1,4 +1,5 @@
-import { X, Mail, Shield, Calendar, Hash, UserCheck, UserX } from 'lucide-react';
+import { X, Mail, Shield, Calendar, Hash, UserCheck, UserX, IdCard } from 'lucide-react';
+import { NOMBRES_DOCUMENTO } from '../../../shared/config/negocio';
 
 export default function UsuarioDetailModal({ isOpen, onClose, usuario, roleNames = {} }) {
   if (!isOpen || !usuario) return null;
@@ -94,6 +95,18 @@ export default function UsuarioDetailModal({ isOpen, onClose, usuario, roleNames
             </span>
             <span className="font-mono font-semibold text-xs text-foreground">
               #{usuario.id_usuario}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-muted/40 border border-border/50">
+            <span className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+              <IdCard className="w-3.5 h-3.5" />
+              Documento
+            </span>
+            <span className="text-xs font-medium text-foreground text-right">
+              {usuario.documento
+                ? `${NOMBRES_DOCUMENTO[usuario.tipo_documento] || usuario.tipo_documento} ${usuario.documento}`
+                : 'Sin registrar'}
             </span>
           </div>
 

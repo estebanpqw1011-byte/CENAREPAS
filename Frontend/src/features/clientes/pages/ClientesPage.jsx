@@ -14,6 +14,7 @@ import { CustomSelect } from '../../../shared/components/CustomSelect';
 import ErrorBanner from '../../../shared/components/ErrorBanner';
 import { exportToPdf } from '../../../shared/utils/exportToPdf';
 import { exportToExcel } from '../../../shared/utils/exportToExcel';
+import { documentoTexto, nombreTipoDocumento } from '../../../shared/utils/persona';
 
 export default function ClientesPage() {
   const { can } = usePermissions();
@@ -83,7 +84,7 @@ export default function ClientesPage() {
       {
         key: 'documento',
         label: 'Documento',
-        render: (value) => <span className="text-muted-foreground">{value}</span>,
+        render: (value, row) => <span className="text-muted-foreground">{documentoTexto(row.tipo_documento, value)}</span>,
       },
       {
         key: 'telefono',
@@ -137,7 +138,7 @@ export default function ClientesPage() {
       columns: [
         { header: 'ID', key: 'id_cliente' },
         { header: 'Cliente', key: 'nombre' },
-        { header: 'Documento', key: 'documento' },
+        { header: 'Documento', accessor: (c) => documentoTexto(c.tipo_documento, c.documento) },
         { header: 'Teléfono', key: 'telefono' },
         { header: 'Correo', key: 'correo' },
         { header: 'Dirección', key: 'direccion' },
@@ -154,7 +155,7 @@ export default function ClientesPage() {
       columns: [
         { header: 'ID', key: 'id_cliente', align: 'center' },
         { header: 'Cliente / Razón Social', key: 'nombre' },
-        { header: 'Documento / NIT', key: 'documento', align: 'center' },
+        { header: 'Documento', accessor: (c) => documentoTexto(c.tipo_documento, c.documento), align: 'center' },
         { header: 'Teléfono', key: 'telefono' },
         { header: 'Correo Electrónico', key: 'correo' },
         { header: 'Dirección', key: 'direccion' },
@@ -228,8 +229,15 @@ export default function ClientesPage() {
         title="Detalle del Cliente"
         fields={detailModal.data ? [
           { label: 'ID', value: detailModal.data.id_cliente },
-          { label: 'Cliente', value: detailModal.data.nombre },
-          { label: 'Documento', value: detailModal.data.documento },
+          { label: 'Tipo de persona', value: detailModal.data.tipo_persona || 'Natural' },
+          ...(detailModal.data.tipo_persona === 'Jurídica'
+            ? [{ label: 'Razón social', value: detailModal.data.razon_social || detailModal.data.nombre }]
+            : [
+                { label: 'Nombres', value: detailModal.data.nombres || detailModal.data.nombre },
+                { label: 'Apellidos', value: detailModal.data.apellidos || '—' },
+              ]),
+          { label: 'Tipo de documento', value: nombreTipoDocumento(detailModal.data.tipo_documento) || '—' },
+          { label: 'Número de documento', value: detailModal.data.documento },
           { label: 'Teléfono', value: detailModal.data.telefono },
           { label: 'Correo', value: detailModal.data.correo },
           { label: 'Dirección', value: detailModal.data.direccion },

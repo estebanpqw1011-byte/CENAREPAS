@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { User, FileText, Phone, Mail, MapPin } from 'lucide-react';
+import { User, Phone, Mail, MapPin } from 'lucide-react';
 import { Combobox } from '../../../shared/ui/Combobox';
 import { StepperModal } from '../../../shared/components/StepperModal';
+import { PersonaFields } from '../../../shared/components/PersonaFields';
+import { personaDe, validarPersona, personaPayload, personaCambio } from '../../../shared/utils/persona';
 
 export function ClienteFormModal({ open, onClose, cliente = null, onSave, isLoading = false }) {
-  const [nombre, setNombre] = useState('');
-  const [documento, setDocumento] = useState('');
+  // Tipo de persona, documento y nombres + apellidos o razón social.
+  const [persona, setPersona] = useState(() => personaDe(null));
   const [telefono, setTelefono] = useState('');
   const [correo, setCorreo] = useState('');
   const [direccion, setDireccion] = useState('');
@@ -16,16 +18,14 @@ export function ClienteFormModal({ open, onClose, cliente = null, onSave, isLoad
     if (open) {
       setCurrentStep(0);
       if (cliente) {
-        setNombre(cliente.nombre || '');
-        setDocumento(cliente.documento || '');
+        setPersona(personaDe(cliente));
         setTelefono(cliente.telefono || '');
         setCorreo(cliente.correo || '');
         setDireccion(cliente.direccion || '');
         const isInactive = String(cliente.estado ?? '').toLowerCase() === 'inactivo';
         setEstado(isInactive ? 'Inactivo' : 'Activo');
       } else {
-        setNombre('');
-        setDocumento('');
+        setPersona(personaDe(null));
         setTelefono('');
         setCorreo('');
         setDireccion('');
@@ -39,30 +39,18 @@ export function ClienteFormModal({ open, onClose, cliente = null, onSave, isLoad
   const isDirty = useMemo(() => {
     if (!open) return false;
     if (!cliente) {
-      return nombre.trim() !== '' || documento.trim() !== '' || telefono.trim() !== '' || correo.trim() !== '';
+      return personaCambio(persona, null) || telefono.trim() !== '' || correo.trim() !== '';
     }
     return (
-      nombre !== (cliente.nombre || '') ||
-      documento !== (cliente.documento || '') ||
+      personaCambio(persona, cliente) ||
       telefono !== (cliente.telefono || '') ||
       correo !== (cliente.correo || '') ||
       direccion !== (cliente.direccion || '') ||
       estado !== (cliente.estado || 'Activo')
     );
-  }, [open, cliente, nombre, documento, telefono, correo, direccion, estado]);
+  }, [open, cliente, persona, telefono, correo, direccion, estado]);
 
-  const validateStep1 = useCallback(() => {
-    if (!nombre.trim()) {
-      return 'El nombre o razón social del cliente es obligatorio.';
-    }
-    if (nombre.trim().length < 3) {
-      return 'El nombre debe tener al menos 3 caracteres.';
-    }
-    if (!documento.trim()) {
-      return 'El documento, cédula o NIT es obligatorio.';
-    }
-    return true;
-  }, [nombre, documento]);
+  const validateStep1 = useCallback(() => validarPersona(persona), [persona]);
 
   const validateStep2 = useCallback(() => {
     if (correo.trim()) {
@@ -86,19 +74,21 @@ export function ClienteFormModal({ open, onClose, cliente = null, onSave, isLoad
       return;
     }
 
+    // `nombre` no se envía: el backend lo arma con nombres + apellidos o razón social.
+    const { nombre: _nombre, ...clienteSinNombre } = cliente || {};
     const payload = cliente
       ? {
-          ...cliente,
-          nombre: nombre.trim(),
-          documento: documento.trim(),
+          ...clienteSinNombre,
+          ...personaPayload(persona),
+          documento: persona.documento.trim(),
           telefono: telefono.trim() || null,
           correo: correo.trim() || null,
           direccion: direccion.trim() || null,
           estado,
         }
       : {
-          nombre: nombre.trim(),
-          documento: documento.trim(),
+          ...personaPayload(persona),
+          documento: persona.documento.trim(),
           telefono: telefono.trim() || null,
           correo: correo.trim() || null,
           direccion: direccion.trim() || null,
@@ -110,59 +100,17 @@ export function ClienteFormModal({ open, onClose, cliente = null, onSave, isLoad
     } else {
       onClose();
     }
-  }, [validateStep1, validateStep2, cliente, nombre, documento, telefono, correo, direccion, estado, onSave, onClose]);
+  }, [validateStep1, validateStep2, cliente, persona, telefono, correo, direccion, estado, onSave, onClose]);
 
   const steps = useMemo(() => [
     {
       id: 'datos-cliente',
       title: 'Datos del cliente',
-      description: 'Nombre completo o razón social, documento y estado',
+      description: 'Tipo de persona, documento, nombre o razón social y estado',
       validate: validateStep1,
       content: (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
-          {/* Nombre / Razón Social */}
-          <div className="sm:col-span-2">
-            <label htmlFor="cliente_nombre" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Nombre o Razón Social <span className="text-destructive font-bold ml-0.5">*</span>
-            </label>
-            <div className="relative">
-              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-              <input
-                id="cliente_nombre"
-                name="nombre"
-                type="text"
-                maxLength={150}
-                autoFocus
-                placeholder="Ej. Restaurante Sabor Paisa, Tienda Doña Rosa..."
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Nombre del establecimiento comercial o cliente particular.
-            </p>
-          </div>
-
-          {/* Documento */}
-          <div className="sm:col-span-1">
-            <label htmlFor="cliente_documento" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Cédula / NIT <span className="text-destructive font-bold ml-0.5">*</span>
-            </label>
-            <div className="relative">
-              <FileText className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-              <input
-                id="cliente_documento"
-                name="documento"
-                type="text"
-                maxLength={20}
-                placeholder="Ej. 1098765432 ó 901.234.567-8"
-                value={documento}
-                onChange={(e) => setDocumento(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-              />
-            </div>
-          </div>
+          <PersonaFields persona={persona} onChange={setPersona} prefijo="cliente" autoFocus />
 
           {/* Estado */}
           <div className="sm:col-span-1">
@@ -273,7 +221,7 @@ export function ClienteFormModal({ open, onClose, cliente = null, onSave, isLoad
         </div>
       ),
     },
-  ], [nombre, documento, estado, telefono, correo, direccion, validateStep1, validateStep2]);
+  ], [persona, estado, telefono, correo, direccion, validateStep1, validateStep2]);
 
   return (
     <StepperModal
