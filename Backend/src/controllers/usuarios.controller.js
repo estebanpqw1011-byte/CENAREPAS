@@ -1,6 +1,7 @@
 import { UsuariosService } from '../services/usuarios.service.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { tienePermiso } from '../middlewares/auth.middleware.js';
+import { reglasEstado } from '../utils/estadoRegistro.js';
 
 export class UsuariosController {
   static async getAll(req, res, next) {
@@ -44,6 +45,8 @@ export class UsuariosController {
 
   static async delete(req, res, next) {
     try {
+      // Mismas reglas que PATCH /usuarios/:id/estado: ni a sí mismo ni al último Administrador.
+      await reglasEstado.usuario(req, Number(req.params.id), 'Inactivo');
       const ok = await UsuariosService.delete(req.params.id);
       if (!ok) return errorResponse(res, 'Usuario no encontrado', 404);
       return successResponse(res, null, 'Usuario inactivado exitosamente');

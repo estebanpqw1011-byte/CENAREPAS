@@ -1,8 +1,18 @@
 import { Router } from 'express';
 import { UsuariosController } from '../controllers/usuarios.controller.js';
 import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { cambiarEstadoHandler, reglasEstado } from '../utils/estadoRegistro.js';
 
 const router = Router();
+
+// PATCH /:id/estado { estado: 'Activo' | 'Inactivo' } (cambiar_estado). Va antes de
+// cualquier router.use para que no se trate como "editar".
+router.patch(
+  '/:id/estado',
+  authenticate,
+  authorize('usuarios', 'cambiar_estado'),
+  cambiarEstadoHandler({ tabla: 'usuario', pk: 'id_usuario', entidad: 'Usuario', columnas: 'id_usuario, nombre, correo, id_rol, estado, fecha_creacion', regla: reglasEstado.usuario })
+);
 
 router.use(authenticate);
 

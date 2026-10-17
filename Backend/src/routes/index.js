@@ -19,6 +19,7 @@ import uploadsRoutes from './uploads.routes.js';
 import abonosRoutes from './abonos.routes.js';
 import comprobantesRoutes from './comprobantes.routes.js';
 import miRoutes from './mi.routes.js';
+import opcionesRoutes from './opciones.routes.js';
 
 const router = Router();
 
@@ -47,6 +48,7 @@ router.use('/dashboard', dashboardRoutes);
 router.use('/uploads', uploadsRoutes);
 router.use('/abonos', abonosRoutes);
 router.use('/comprobantes', comprobantesRoutes);
+router.use('/opciones', opcionesRoutes);
 // Endpoints del rol Cliente: siempre filtrados por el token
 router.use('/mi', miRoutes);
 
