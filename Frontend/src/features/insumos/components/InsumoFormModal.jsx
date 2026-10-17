@@ -132,7 +132,7 @@ export function InsumoFormModal({ open, onClose, insumo = null, onSave, isLoadin
     {
       id: 'info-insumo',
       title: 'Datos generales',
-      description: 'Nombre del insumo, proveedor asociado y estado',
+      description: 'Nombre del insumo, unidad de medida y proveedor habitual',
       validate: validateStep1,
       content: (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
@@ -157,6 +157,26 @@ export function InsumoFormModal({ open, onClose, insumo = null, onSave, isLoadin
             </div>
           </div>
 
+          {/* Unidad de Medida */}
+          <div className="sm:col-span-1">
+            <label htmlFor="insumo_unidad_medida" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Unidad de medida <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
+            <Combobox
+              id="insumo_unidad_medida"
+              name="unidad_medida"
+              value={unidadMedida}
+              onChange={(e) => setUnidadMedida(e.target.value)}
+              options={[
+                { value: 'kg', label: 'kg (Kilogramos)' },
+                { value: 'g', label: 'g (Gramos)' },
+                { value: 'l', label: 'l (Litros)' },
+                { value: 'ml', label: 'ml (Mililitros)' },
+                { value: 'unidad', label: 'unidad (Unidades)' },
+              ]}
+            />
+          </div>
+
           {/* Proveedor */}
           <div className="sm:col-span-1">
             <label htmlFor="insumo_id_proveedor" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
@@ -174,29 +194,12 @@ export function InsumoFormModal({ open, onClose, insumo = null, onSave, isLoadin
             />
           </div>
 
-          {/* Estado */}
-          <div className="sm:col-span-1">
-            <label htmlFor="insumo_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Estado <span className="text-destructive font-bold ml-0.5">*</span>
-            </label>
-            <Combobox
-              id="insumo_estado"
-              name="estado"
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
-              options={[
-                { value: 'Activo', label: 'Activo' },
-                { value: 'Inactivo', label: 'Inactivo' },
-              ]}
-            />
-          </div>
-
           {/* Ayuda contextual */}
           <div className="sm:col-span-2 p-3.5 rounded-xl bg-muted/40 border border-border/60 flex items-start gap-3 text-xs text-muted-foreground">
             <Truck className="size-4 text-[#C1502D] dark:text-[#E8B23D] shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold text-foreground block mb-0.5">Control de abastecimiento</span>
-              En el siguiente paso podrás registrar las existencias actuales, unidad de medida y el umbral de stock mínimo para alertas.
+              En el siguiente paso podrás registrar las existencias actuales, el umbral de stock mínimo para alertas, la vigencia y el estado.
             </div>
           </div>
         </div>
@@ -205,7 +208,7 @@ export function InsumoFormModal({ open, onClose, insumo = null, onSave, isLoadin
     {
       id: 'stock-inventario',
       title: 'Inventario',
-      description: 'Cantidades, unidad de medida, stock mínimo y vigencia',
+      description: 'Existencias, stock mínimo, vigencia y estado',
       validate: validateStep2,
       content: (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
@@ -224,26 +227,6 @@ export function InsumoFormModal({ open, onClose, insumo = null, onSave, isLoadin
               value={stockActual}
               onChange={(e) => setStockActual(e.target.value)}
               className="w-full h-10 px-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all font-mono"
-            />
-          </div>
-
-          {/* Unidad de Medida */}
-          <div className="sm:col-span-1">
-            <label htmlFor="insumo_unidad_medida" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Unidad de medida <span className="text-destructive font-bold ml-0.5">*</span>
-            </label>
-            <Combobox
-              id="insumo_unidad_medida"
-              name="unidad_medida"
-              value={unidadMedida}
-              onChange={(e) => setUnidadMedida(e.target.value)}
-              options={[
-                { value: 'kg', label: 'kg (Kilogramos)' },
-                { value: 'g', label: 'g (Gramos)' },
-                { value: 'l', label: 'l (Litros)' },
-                { value: 'ml', label: 'ml (Mililitros)' },
-                { value: 'unidad', label: 'unidad (Unidades)' },
-              ]}
             />
           </div>
 
@@ -281,6 +264,23 @@ export function InsumoFormModal({ open, onClose, insumo = null, onSave, isLoadin
                 className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
               />
             </div>
+          </div>
+
+          {/* Estado */}
+          <div className="sm:col-span-1">
+            <label htmlFor="insumo_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Estado <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
+            <Combobox
+              id="insumo_estado"
+              name="estado"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              options={[
+                { value: 'Activo', label: 'Activo' },
+                { value: 'Inactivo', label: 'Inactivo' },
+              ]}
+            />
           </div>
 
           {/* Ayuda contextual */}

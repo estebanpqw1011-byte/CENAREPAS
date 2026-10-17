@@ -188,8 +188,8 @@ export default function FichasTecnicasPage() {
           accessor: (f) => f.tiempo_estimado_minutos || 0,
           align: 'right',
         },
-        { header: 'Estado', key: 'estado', align: 'center' },
         { header: 'Descripción', key: 'descripcion' },
+        { header: 'Estado', key: 'estado', align: 'center' },
       ],
       title: 'Reporte de Fichas Técnicas (Recetas)',
       subtitle: 'Estándares de producción, tiempos y formulaciones en CENAREPAS',
@@ -260,9 +260,8 @@ export default function FichasTecnicasPage() {
           { label: 'Código Receta', value: `#${detailModal.data.id_ficha}` },
           { label: 'Nombre', value: detailModal.data.nombre },
           { label: 'Descripción', value: detailModal.data.descripcion || 'N/A' },
-          { label: 'Instrucciones de Preparación', value: detailModal.data.instrucciones_preparacion || 'N/A' },
-          { label: 'Tiempo Estimado', value: `${detailModal.data.tiempo_estimado_minutos} min` },
           { label: 'Rendimiento por Lote', value: `${detailModal.data.rendimiento_lote} und` },
+          { label: 'Tiempo Estimado', value: `${detailModal.data.tiempo_estimado_minutos} min` },
           {
             label: 'Insumos Requeridos',
             value: (() => {
@@ -282,6 +281,7 @@ export default function FichasTecnicasPage() {
               );
             })(),
           },
+          { label: 'Instrucciones de Preparación', value: detailModal.data.instrucciones_preparacion || 'N/A' },
           { label: 'Estado', value: detailModal.data.estado },
         ] : []}
       />

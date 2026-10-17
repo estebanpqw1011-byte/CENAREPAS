@@ -176,7 +176,7 @@ export function FichaTecnicaFormModal({ open, onClose, ficha = null, onSave, isL
     {
       id: 'datos-generales',
       title: 'Parámetros base',
-      description: 'Nombre, rendimiento, tiempos de cocción y modo de preparación',
+      description: 'Nombre, descripción, rendimiento y tiempo de preparación',
       validate: validateStep1,
       content: (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
@@ -199,6 +199,23 @@ export function FichaTecnicaFormModal({ open, onClose, ficha = null, onSave, isL
                 className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
               />
             </div>
+          </div>
+
+          {/* Descripción */}
+          <div className="sm:col-span-2">
+            <label htmlFor="ficha_descripcion" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Descripción general <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
+            </label>
+            <textarea
+              id="ficha_descripcion"
+              name="descripcion"
+              rows={2}
+              maxLength={255}
+              placeholder="Descripción de la preparación, tipo de masa y contextura..."
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              className="w-full p-3 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all resize-none min-h-[60px]"
+            />
           </div>
 
           {/* Rendimiento */}
@@ -239,63 +256,13 @@ export function FichaTecnicaFormModal({ open, onClose, ficha = null, onSave, isL
             </div>
           </div>
 
-          {/* Estado */}
-          <div className="sm:col-span-2">
-            <label htmlFor="ficha_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Estado <span className="text-destructive font-bold ml-0.5">*</span>
-            </label>
-            <Combobox
-              id="ficha_estado"
-              name="estado"
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
-              options={[
-                { value: 'Activo', label: 'Activo' },
-                { value: 'Inactivo', label: 'Inactivo' },
-              ]}
-            />
-          </div>
-
-          {/* Descripción */}
-          <div className="sm:col-span-2">
-            <label htmlFor="ficha_descripcion" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Descripción general <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
-            </label>
-            <textarea
-              id="ficha_descripcion"
-              name="descripcion"
-              rows={2}
-              maxLength={255}
-              placeholder="Descripción de la preparación, tipo de masa y contextura..."
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              className="w-full p-3 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all resize-none min-h-[60px]"
-            />
-          </div>
-
-          {/* Instrucciones */}
-          <div className="sm:col-span-2">
-            <label htmlFor="ficha_instrucciones" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Instrucciones de preparación paso a paso <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
-            </label>
-            <textarea
-              id="ficha_instrucciones"
-              name="instrucciones_preparacion"
-              rows={2}
-              maxLength={500}
-              placeholder="1. Mezclar harina con agua tibia... 2. Amasar por 10 min..."
-              value={instrucciones}
-              onChange={(e) => setInstrucciones(e.target.value)}
-              className="w-full p-3 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all resize-none min-h-[60px]"
-            />
-          </div>
         </div>
       ),
     },
     {
       id: 'insumos-receta',
       title: 'Insumos y receta',
-      description: 'Materias primas y proporciones necesarias por lote',
+      description: 'Materias primas por lote, instrucciones y estado',
       validate: validateStep2,
       content: (
         <div className="space-y-4 py-1">
@@ -394,6 +361,23 @@ export function FichaTecnicaFormModal({ open, onClose, ficha = null, onSave, isL
               value={instrucciones}
               onChange={(e) => setInstrucciones(e.target.value)}
               className="w-full p-3 border border-border bg-input-background rounded-xl text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all shadow-xs resize-none"
+            />
+          </div>
+
+          {/* Estado */}
+          <div className="sm:col-span-2">
+            <label htmlFor="ficha_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Estado <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
+            <Combobox
+              id="ficha_estado"
+              name="estado"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              options={[
+                { value: 'Activo', label: 'Activo' },
+                { value: 'Inactivo', label: 'Inactivo' },
+              ]}
             />
           </div>
         </div>

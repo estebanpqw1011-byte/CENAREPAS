@@ -128,18 +128,19 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
     if (!precioVenta || isNaN(Number(precioVenta)) || Number(precioVenta) <= 0) {
       return 'El precio de venta debe ser un número mayor a 0.';
     }
+    // El stock mínimo está en el paso 1: se valida aquí.
+    if (stockMinimo !== '' && (isNaN(Number(stockMinimo)) || Number(stockMinimo) < 0)) {
+      return 'El stock mínimo debe ser un número válido.';
+    }
     return true;
-  }, [nombre, precioVenta]);
+  }, [nombre, precioVenta, stockMinimo]);
 
   const validateStep2 = useCallback(() => {
     if (stockActual !== '' && (isNaN(Number(stockActual)) || Number(stockActual) < 0)) {
       return 'El stock inicial debe ser un número válido.';
     }
-    if (stockMinimo !== '' && (isNaN(Number(stockMinimo)) || Number(stockMinimo) < 0)) {
-      return 'El stock mínimo debe ser un número válido.';
-    }
     return true;
-  }, [stockActual, stockMinimo]);
+  }, [stockActual]);
 
   const handleSubmit = useCallback(async () => {
     const v1 = validateStep1();
@@ -209,7 +210,7 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
     {
       id: 'info-comercial',
       title: 'Datos comerciales',
-      description: 'Nombre, categoría, precio de venta, stock mínimo y descripción',
+      description: 'Nombre, categoría, descripción, precio de venta y stock mínimo',
       validate: validateStep1,
       content: (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
@@ -235,7 +236,7 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
           </div>
 
           {/* Categoría */}
-          <div className="sm:col-span-1">
+          <div className="sm:col-span-2">
             <label htmlFor="producto_id_categoria" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
               Categoría <span className="text-destructive font-bold ml-0.5">*</span>
             </label>
@@ -248,6 +249,23 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
                 value: String(cat.id_categoria),
                 label: cat.nombre,
               }))}
+            />
+          </div>
+
+          {/* Descripción */}
+          <div className="sm:col-span-2">
+            <label htmlFor="producto_descripcion" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Descripción comercial <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
+            </label>
+            <textarea
+              id="producto_descripcion"
+              name="descripcion"
+              rows={2}
+              maxLength={255}
+              placeholder="Detalla ingredientes, presentación o recomendaciones..."
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              className="w-full p-3 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all resize-none min-h-[65px]"
             />
           </div>
 
@@ -289,46 +307,13 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
             />
           </div>
 
-          {/* Estado */}
-          <div className="sm:col-span-1">
-            <label htmlFor="producto_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Estado <span className="text-destructive font-bold ml-0.5">*</span>
-            </label>
-            <Combobox
-              id="producto_estado"
-              name="estado"
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
-              options={[
-                { value: 'Activo', label: 'Activo' },
-                { value: 'Inactivo', label: 'Inactivo' },
-              ]}
-            />
-          </div>
-
-          {/* Descripción */}
-          <div className="sm:col-span-2">
-            <label htmlFor="producto_descripcion" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Descripción comercial <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
-            </label>
-            <textarea
-              id="producto_descripcion"
-              name="descripcion"
-              rows={2}
-              maxLength={255}
-              placeholder="Detalla ingredientes, presentación o recomendaciones..."
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              className="w-full p-3 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all resize-none min-h-[65px]"
-            />
-          </div>
         </div>
       ),
     },
     {
       id: 'ficha-imagen',
       title: 'Ficha e imagen',
-      description: 'Ficha técnica de producción, proveedor y fotografía del producto',
+      description: 'Ficha técnica, proveedor, fotografía y estado',
       validate: validateStep2,
       content: (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
@@ -435,6 +420,23 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Estado */}
+          <div className="sm:col-span-1">
+            <label htmlFor="producto_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Estado <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
+            <Combobox
+              id="producto_estado"
+              name="estado"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              options={[
+                { value: 'Activo', label: 'Activo' },
+                { value: 'Inactivo', label: 'Inactivo' },
+              ]}
+            />
           </div>
 
           {/* Ayuda contextual */}

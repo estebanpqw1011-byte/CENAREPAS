@@ -200,7 +200,7 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
     {
       id: 'datos-lote',
       title: 'Parámetros del Lote',
-      description: 'Ficha técnica, unidades elaboradas, fecha y responsable',
+      description: 'Ficha técnica, fecha, unidades elaboradas, responsable y observaciones',
       validate: validateStep1,
       content: (
         <div className="space-y-4">
@@ -223,25 +223,6 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
               />
             </div>
 
-            {/* Cantidad a producir */}
-            <div className="sm:col-span-1">
-              <label htmlFor="lote_cantidad_producida" className="block text-xs sm:text-sm font-bold text-foreground mb-1.5">
-                Cantidad a Producir (paquetes) <span className="text-destructive font-bold ml-0.5">*</span>
-              </label>
-              <input
-                id="lote_cantidad_producida"
-                name="cantidad_producida"
-                type="number"
-                min="1"
-                step="1"
-                required
-                placeholder="Ej. 500"
-                value={cantidadProducida}
-                onChange={(e) => setCantidadProducida(e.target.value)}
-                className="w-full h-10 px-3.5 border border-border bg-input-background rounded-xl text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all shadow-xs font-mono"
-              />
-            </div>
-
             {/* Fecha de producción */}
             <div className="sm:col-span-1">
               <label htmlFor="lote_fecha_produccion" className="block text-xs sm:text-sm font-bold text-foreground mb-1.5">
@@ -261,8 +242,27 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
               </div>
             </div>
 
-            {/* Responsable */}
+            {/* Cantidad a producir */}
             <div className="sm:col-span-1">
+              <label htmlFor="lote_cantidad_producida" className="block text-xs sm:text-sm font-bold text-foreground mb-1.5">
+                Cantidad a Producir (paquetes) <span className="text-destructive font-bold ml-0.5">*</span>
+              </label>
+              <input
+                id="lote_cantidad_producida"
+                name="cantidad_producida"
+                type="number"
+                min="1"
+                step="1"
+                required
+                placeholder="Ej. 500"
+                value={cantidadProducida}
+                onChange={(e) => setCantidadProducida(e.target.value)}
+                className="w-full h-10 px-3.5 border border-border bg-input-background rounded-xl text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all shadow-xs font-mono"
+              />
+            </div>
+
+            {/* Responsable */}
+            <div className="sm:col-span-2">
               <label htmlFor="lote_id_usuario_responsable" className="block text-xs sm:text-sm font-bold text-foreground mb-1.5">
                 Operario / Supervisor responsable <span className="text-destructive font-bold ml-0.5">*</span>
               </label>
@@ -275,24 +275,6 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
                   value: String(u.id_usuario),
                   label: u.nombre,
                 }))}
-              />
-            </div>
-
-            {/* Estado */}
-            <div className="sm:col-span-1">
-              <label htmlFor="lote_estado" className="block text-xs sm:text-sm font-bold text-foreground mb-1.5">
-                Estado del lote <span className="text-destructive font-bold ml-0.5">*</span>
-              </label>
-              <Combobox
-                id="lote_estado"
-                name="estado"
-                value={estado}
-                onChange={(e) => setEstado(e.target.value)}
-                options={[
-                  { value: 'En proceso', label: 'En proceso (En línea de horneo/amasado)' },
-                  { value: 'Terminado', label: 'Terminado (Listo para empaque/CEDIS)' },
-                  { value: 'Anulado', label: 'Anulado (Descartado por calidad)' },
-                ]}
               />
             </div>
 
@@ -319,7 +301,7 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
     {
       id: 'insumos-lote',
       title: 'Insumos Consumidos',
-      description: 'Materias primas a descontar del inventario de bodega',
+      description: 'Materias primas a descontar del inventario y estado del lote',
       validate: validateStep2,
       content: (
         <div className="space-y-4">
@@ -409,6 +391,24 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
             <p>
               Los insumos listados se descontarán automáticamente del stock general de materias primas cuando el estado del lote sea confirmado.
             </p>
+          </div>
+
+          {/* Estado */}
+          <div className="sm:col-span-1">
+            <label htmlFor="lote_estado" className="block text-xs sm:text-sm font-bold text-foreground mb-1.5">
+              Estado del lote <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
+            <Combobox
+              id="lote_estado"
+              name="estado"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              options={[
+                { value: 'En proceso', label: 'En proceso (En línea de horneo/amasado)' },
+                { value: 'Terminado', label: 'Terminado (Listo para empaque/CEDIS)' },
+                { value: 'Anulado', label: 'Anulado (Descartado por calidad)' },
+              ]}
+            />
           </div>
         </div>
       ),

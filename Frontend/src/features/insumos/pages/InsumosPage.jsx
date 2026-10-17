@@ -193,8 +193,8 @@ export default function InsumosPage() {
               ? `Proveedor #${i.id_proveedor}`
               : 'N/A'),
         },
-        { header: 'Estado', key: 'estado' },
         { header: 'Vencimiento', key: 'fecha_vencimiento' },
+        { header: 'Estado', key: 'estado' },
       ],
       title: 'Reporte de Insumos y Materias Primas',
       subtitle: 'Inventario de granos, lácteos y materias primas en CENAREPAS',
@@ -220,8 +220,8 @@ export default function InsumosPage() {
               ? `Proveedor #${i.id_proveedor}`
               : 'N/A'),
         },
-        { header: 'Estado', key: 'estado', align: 'center' },
         { header: 'Fecha de Vencimiento', key: 'fecha_vencimiento', align: 'center' },
+        { header: 'Estado', key: 'estado', align: 'center' },
       ],
       title: 'Reporte de Insumos y Materias Primas',
       subtitle: 'Inventario de granos, lácteos y materias primas en CENAREPAS',
@@ -307,18 +307,18 @@ export default function InsumosPage() {
                 { label: 'ID', value: `#${detailModal.data.id_insumo}` },
                 { label: 'Nombre', value: detailModal.data.nombre },
                 { label: 'Unidad de Medida', value: detailModal.data.unidad_medida },
-                { label: 'Stock Actual', value: detailModal.data.stock_actual },
-                { label: 'Stock Mínimo', value: detailModal.data.stock_minimo },
-                {
-                  label: 'Fecha de Vencimiento',
-                  value: detailModal.data.fecha_vencimiento || 'N/A',
-                },
                 {
                   label: 'Proveedor',
                   value:
                     proveedorNames[detailModal.data.id_proveedor] ||
                     detailModal.data.id_proveedor ||
                     'N/A',
+                },
+                { label: 'Stock Actual', value: detailModal.data.stock_actual },
+                { label: 'Stock Mínimo', value: detailModal.data.stock_minimo },
+                {
+                  label: 'Fecha de Vencimiento',
+                  value: detailModal.data.fecha_vencimiento || 'N/A',
                 },
                 { label: 'Estado', value: detailModal.data.estado },
               ]

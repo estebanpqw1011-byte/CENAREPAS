@@ -121,13 +121,9 @@ export default function ProduccionPage() {
         ),
       },
       {
-        key: 'id_usuario_responsable',
-        label: 'Responsable',
-        render: (value) => (
-          <span className="text-muted-foreground text-sm">
-            {usuariosNames[value] || `Usuario #${value}`}
-          </span>
-        ),
+        key: 'fecha_produccion',
+        label: 'Fecha',
+        render: (value) => <span className="text-muted-foreground text-sm">{value}</span>,
       },
       {
         key: 'cantidad_producida',
@@ -135,9 +131,13 @@ export default function ProduccionPage() {
         render: (value) => <span className="font-semibold text-sm">{Number(value || 0).toLocaleString('es-CO')} und</span>,
       },
       {
-        key: 'fecha_produccion',
-        label: 'Fecha',
-        render: (value) => <span className="text-muted-foreground text-sm">{value}</span>,
+        key: 'id_usuario_responsable',
+        label: 'Responsable',
+        render: (value) => (
+          <span className="text-muted-foreground text-sm">
+            {usuariosNames[value] || `Usuario #${value}`}
+          </span>
+        ),
       },
       {
         key: 'estado',
@@ -230,8 +230,8 @@ export default function ProduccionPage() {
           header: 'Responsable de Turno',
           accessor: (l) => usuariosNames[l.id_usuario_responsable] || `Usuario #${l.id_usuario_responsable}`,
         },
-        { header: 'Estado', key: 'estado', align: 'center' },
         { header: 'Observaciones', key: 'observaciones' },
+        { header: 'Estado', key: 'estado', align: 'center' },
       ],
       title: 'Reporte de Lotes de Producción',
       subtitle: 'Control de lotes elaborados, fechas y operarios responsables en CENAREPAS',
@@ -302,9 +302,10 @@ export default function ProduccionPage() {
         fields={detailModal.data ? [
           { label: 'ID', value: `#${detailModal.data.id_lote}` },
           { label: 'Ficha / Receta', value: fichasNames[detailModal.data.id_ficha] || `Receta #${detailModal.data.id_ficha}` },
-          { label: 'Responsable', value: usuariosNames[detailModal.data.id_usuario_responsable] || `Usuario #${detailModal.data.id_usuario_responsable}` },
           { label: 'Fecha de Producción', value: detailModal.data.fecha_produccion },
           { label: 'Cantidad Producida', value: `${Number(detailModal.data.cantidad_producida || 0).toLocaleString('es-CO')} und` },
+          { label: 'Responsable', value: usuariosNames[detailModal.data.id_usuario_responsable] || `Usuario #${detailModal.data.id_usuario_responsable}` },
+          { label: 'Observaciones', value: detailModal.data.observaciones || 'N/A' },
           {
             label: 'Insumos Utilizados',
             value: (() => {
@@ -324,7 +325,6 @@ export default function ProduccionPage() {
               );
             })(),
           },
-          { label: 'Observaciones', value: detailModal.data.observaciones || 'N/A' },
           { label: 'Estado', value: detailModal.data.estado },
         ] : []}
       />
