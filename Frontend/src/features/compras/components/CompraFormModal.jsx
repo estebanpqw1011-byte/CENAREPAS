@@ -213,7 +213,7 @@ export function CompraFormModal({ open, onClose, compra = null, onSave, isLoadin
           ...compraSinSoporte,
           fecha_compra: fechaCompra,
           id_proveedor: Number(idProveedor) || 1,
-          id_usuario: compra.id_usuario || 1,
+          id_usuario: compra.id_usuario,
           valor_total: valorTotalCalculado,
           medio_pago: medioPago,
           ...soporte,
@@ -223,7 +223,6 @@ export function CompraFormModal({ open, onClose, compra = null, onSave, isLoadin
       : {
           fecha_compra: fechaCompra,
           id_proveedor: Number(idProveedor) || 1,
-          id_usuario: 1,
           valor_total: valorTotalCalculado,
           medio_pago: medioPago,
           ...soporte,

@@ -38,7 +38,8 @@ export class ComprasController {
 
   static async create(req, res, next) {
     try {
-      const data = await ComprasService.create(req.body);
+      // Registra la compra quien tiene la sesión (la web enviaba un id fijo).
+      const data = await ComprasService.create({ ...req.body, id_usuario: req.user.id_usuario });
       return successResponse(res, data, 'Compra creada exitosamente', 201);
     } catch (e) { next(e); }
   }
