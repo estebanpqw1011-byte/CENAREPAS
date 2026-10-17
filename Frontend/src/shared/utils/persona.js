@@ -65,9 +65,9 @@ export function personaPayload(persona) {
   };
 }
 
-/** La persona cambió respecto al registro guardado. */
-export function personaCambio(persona, registro) {
-  const original = personaDe(registro);
+/** La persona cambió respecto al registro guardado (o a la de uno nuevo). */
+export function personaCambio(persona, registro, opciones) {
+  const original = personaDe(registro, opciones);
   return Object.keys(original).some((k) => String(persona[k] ?? '') !== String(original[k] ?? ''));
 }
 

@@ -7,7 +7,6 @@ import { RowActions } from '../../../shared/components/RowActions';
 import { MetricCard } from '../../../shared/components/MetricCard';
 import { ProveedorFormModal } from '../components/ProveedorFormModal';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
-import DetailModal from '../../../shared/components/DetailModal';
 import PageHeader from '../../../shared/components/PageHeader';
 import { usePermissions } from '../../../shared/contexts/PermissionContext';
 import StatusSwitch from '../../../shared/components/StatusSwitch';
@@ -15,6 +14,7 @@ import { CustomSelect } from '../../../shared/components/CustomSelect';
 import ErrorBanner from '../../../shared/components/ErrorBanner';
 import { exportToPdf } from '../../../shared/utils/exportToPdf';
 import { exportToExcel } from '../../../shared/utils/exportToExcel';
+import { documentoTexto } from '../../../shared/utils/persona';
 
 export default function ProveedoresPage() {
   const { can } = usePermissions();
@@ -62,34 +62,26 @@ export default function ProveedoresPage() {
   const columns = useMemo(
     () => [
       {
-        key: 'id_proveedor',
-        label: 'ID',
-        render: (value) => <span className="font-mono font-medium">{value}</span>,
+        key: 'nit',
+        label: 'Documento',
+        render: (value, proveedor) => (
+          <span className="font-mono text-muted-foreground whitespace-nowrap">{documentoTexto(proveedor.tipo_documento, value)}</span>
+        ),
       },
       {
         key: 'nombre',
-        label: 'Proveedor',
+        label: 'Nombre / Razón social',
         render: (value) => <span className="font-semibold">{value}</span>,
-      },
-      {
-        key: 'nit',
-        label: 'NIT',
-        render: (value) => <span className="font-mono text-muted-foreground">{value}</span>,
       },
       {
         key: 'telefono',
         label: 'Teléfono',
-        render: (value) => <span className="text-muted-foreground">{value}</span>,
+        render: (value) => <span className="text-muted-foreground">{value || '—'}</span>,
       },
       {
         key: 'correo',
         label: 'Correo',
-        render: (value) => <span className="text-muted-foreground">{value}</span>,
-      },
-      {
-        key: 'direccion',
-        label: 'Dirección',
-        render: (value) => <span className="text-muted-foreground">{value}</span>,
+        render: (value) => <span className="text-muted-foreground">{value || '—'}</span>,
       },
       {
         key: 'estado',
@@ -101,11 +93,6 @@ export default function ProveedoresPage() {
             onToggle={() => handleRequestStatusChange(proveedor)}
           />
         ),
-      },
-      {
-        key: 'fecha_creacion',
-        label: 'Fecha de Creación',
-        render: (value) => <span className="text-muted-foreground">{value}</span>,
       },
       {
         key: 'acciones',
@@ -135,16 +122,17 @@ export default function ProveedoresPage() {
 
   const handleExportPdf = () => {
     exportToPdf({
-      data: filteredData,
+      data: proveedores,
       columns: [
         { header: 'ID', key: 'id_proveedor' },
-        { header: 'Proveedor', key: 'nombre' },
-        { header: 'NIT', key: 'nit' },
+        { header: 'Tipo de persona', key: 'tipo_persona' },
+        { header: 'Documento', accessor: (p) => documentoTexto(p.tipo_documento, p.nit) },
+        { header: 'Nombre / Razón social', key: 'nombre' },
         { header: 'Teléfono', key: 'telefono' },
         { header: 'Correo', key: 'correo' },
         { header: 'Dirección', key: 'direccion' },
-        { header: 'Estado', key: 'estado' },
         { header: 'Fecha de Creación', key: 'fecha_creacion' },
+        { header: 'Estado', key: 'estado' },
       ],
       title: 'Reporte de Proveedores',
       subtitle: 'Directorio de proveedores registrados en CENAREPAS',
@@ -153,16 +141,17 @@ export default function ProveedoresPage() {
 
   const handleExportExcel = () => {
     exportToExcel({
-      data: filteredData,
+      data: proveedores,
       columns: [
         { header: 'ID', key: 'id_proveedor', align: 'center' },
-        { header: 'Proveedor / Razón Social', key: 'nombre' },
-        { header: 'NIT', key: 'nit', align: 'center' },
+        { header: 'Tipo de persona', key: 'tipo_persona' },
+        { header: 'Documento', accessor: (p) => documentoTexto(p.tipo_documento, p.nit), align: 'center' },
+        { header: 'Nombre / Razón social', key: 'nombre' },
         { header: 'Teléfono', key: 'telefono' },
         { header: 'Correo Electrónico', key: 'correo' },
         { header: 'Dirección', key: 'direccion' },
-        { header: 'Estado', key: 'estado', align: 'center' },
         { header: 'Fecha de Creación', key: 'fecha_creacion', align: 'center' },
+        { header: 'Estado', key: 'estado', align: 'center' },
       ],
       title: 'Reporte de Proveedores',
       subtitle: 'Directorio de proveedores registrados en CENAREPAS',
@@ -209,7 +198,7 @@ export default function ProveedoresPage() {
         addLabel="Nuevo Proveedor"
         addDisabled={!can('proveedores', 'crear')}
         isFiltered={Boolean(searchTerm || filterEstado !== 'Todos los estados')}
-        searchPlaceholder="Buscar por nombre, NIT o correo..."
+        searchPlaceholder="Buscar por nombre, documento o correo..."
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         filters={
@@ -225,20 +214,11 @@ export default function ProveedoresPage() {
         }
       />
 
-      <DetailModal
-        isOpen={detailModal.isOpen}
+      <ProveedorFormModal
+        modo="ver"
+        open={detailModal.isOpen}
+        proveedor={detailModal.data}
         onClose={() => setDetailModal({ isOpen: false, data: null })}
-        title="Detalle del Proveedor"
-        fields={detailModal.data ? [
-          { label: 'ID', value: detailModal.data.id_proveedor },
-          { label: 'Nombre', value: detailModal.data.nombre },
-          { label: 'NIT', value: detailModal.data.nit },
-          { label: 'Teléfono', value: detailModal.data.telefono || 'N/A' },
-          { label: 'Correo', value: detailModal.data.correo || 'N/A' },
-          { label: 'Dirección', value: detailModal.data.direccion || 'N/A' },
-          { label: 'Estado', value: detailModal.data.estado },
-          { label: 'Fecha de Creación', value: detailModal.data.fecha_creacion },
-        ] : []}
       />
 
       <ProveedorFormModal
