@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { COMPROBANTE_MAX_BYTES, COMPROBANTE_MIME } from '../config/negocio.js';
 import { badRequest, forbidden } from '../utils/httpError.js';
+import { cloudinaryConfigurado, subirArchivo, urlTemporal } from '../utils/almacenamiento.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -20,24 +21,10 @@ if (!fs.existsSync(COMPROBANTES_DIR)) {
 
 const EXTENSION = { 'image/jpeg': '.jpg', 'image/png': '.png', 'application/pdf': '.pdf' };
 
-// Firmas de archivo: el contenido debe coincidir con el tipo declarado.
-const FIRMAS = {
-  'image/jpeg': [0xff, 0xd8, 0xff],
-  'image/png': [0x89, 0x50, 0x4e, 0x47],
-  'application/pdf': [0x25, 0x50, 0x44, 0x46], // %PDF
-};
-
-// El nombre lleva el id del usuario que lo sube: así se valida quién puede adjuntarlo.
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, COMPROBANTES_DIR),
-  filename: (req, file, cb) => {
-    const aleatorio = crypto.randomBytes(12).toString('hex');
-    cb(null, `u${req.user.id_usuario}_${Date.now()}_${aleatorio}${EXTENSION[file.mimetype]}`);
-  },
-});
-
+// En memoria: se revisa el contenido y se guarda en Cloudinary (privado) o en
+// COMPROBANTES_DIR (sin credenciales de Cloudinary), con guardarComprobante().
 export const uploadComprobante = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: COMPROBANTE_MAX_BYTES, files: 1 },
   fileFilter: (req, file, cb) => {
     if (COMPROBANTE_MIME.includes(file.mimetype)) return cb(null, true);
@@ -45,17 +32,26 @@ export const uploadComprobante = multer({
   },
 });
 
-/** Revisa la firma del archivo ya guardado; si no coincide, lo borra y falla. */
-export const verificarFirma = (file) => {
-  const firma = FIRMAS[file.mimetype];
-  const fd = fs.openSync(file.path, 'r');
-  const cabecera = Buffer.alloc(firma.length);
-  fs.readSync(fd, cabecera, 0, firma.length, 0);
-  fs.closeSync(fd);
-  if (!firma.every((byte, i) => cabecera[i] === byte)) {
-    fs.unlinkSync(file.path);
-    throw badRequest('El archivo no es un JPG, PNG o PDF válido');
-  }
+/**
+ * Guarda el comprobante y devuelve el nombre del archivo
+ * (u<id>_<marca>_<24 hex>.<ext>): el nombre lleva el id del usuario que lo
+ * sube, así se valida quién puede adjuntarlo. En Cloudinary su public_id es
+ * cenarepas/comprobantes/<nombre sin extensión>.
+ */
+export const guardarComprobante = async (file, idUsuario) => {
+  const nombre = `u${idUsuario}_${Date.now()}_${crypto.randomBytes(12).toString('hex')}`;
+  await subirArchivo(file, { carpeta: 'comprobantes', nombre });
+  return nombre + EXTENSION[file.mimetype];
+};
+
+/** El archivo existe en el disco o, con Cloudinary, se da por guardado allí. */
+const existeComprobante = (archivo) => fs.existsSync(path.join(COMPROBANTES_DIR, archivo)) || cloudinaryConfigurado();
+
+/** URL temporal firmada (10 minutos) de un comprobante guardado en Cloudinary. */
+export const urlTemporalComprobante = (archivo) => {
+  const punto = archivo.lastIndexOf('.');
+  const formato = archivo.slice(punto + 1);
+  return urlTemporal(`cenarepas/comprobantes/${archivo.slice(0, punto)}`, 'image', formato);
 };
 
 const RUTA_PUBLICA = '/api/v1/comprobantes/';
@@ -75,7 +71,7 @@ export const validarComprobanteDelSistema = (url) => {
   const error = (mensaje) => badRequest(mensaje, { comprobante_url: mensaje });
   const archivo = typeof valor === 'string' && valor.startsWith(RUTA_PUBLICA) ? valor.slice(RUTA_PUBLICA.length) : '';
   if (!NOMBRE_VALIDO.test(archivo)) throw error('El comprobante no es válido: súbelo con la opción de adjuntar comprobante');
-  if (!fs.existsSync(path.join(COMPROBANTES_DIR, archivo))) throw error('El comprobante no existe; súbelo de nuevo');
+  if (!existeComprobante(archivo)) throw error('El comprobante no existe; súbelo de nuevo');
   return urlComprobante(archivo);
 };
 
@@ -90,7 +86,7 @@ export const validarComprobanteDelUsuario = (url, idUsuario) => {
   const match = NOMBRE_VALIDO.exec(archivo);
   if (!match) throw badRequest('Comprobante inválido');
   if (Number(match[1]) !== Number(idUsuario)) throw forbidden('El comprobante no pertenece a tu cuenta');
-  if (!fs.existsSync(path.join(COMPROBANTES_DIR, archivo))) throw badRequest('El comprobante no existe; súbelo de nuevo');
+  if (!existeComprobante(archivo)) throw badRequest('El comprobante no existe; súbelo de nuevo');
   return urlComprobante(archivo);
 };
 

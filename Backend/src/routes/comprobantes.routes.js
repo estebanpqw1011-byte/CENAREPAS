@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { authenticate, tienePermiso } from '../middlewares/auth.middleware.js';
 import {
-  archivoComprobante, uploadComprobante, urlComprobante, verificarFirma,
+  archivoComprobante, guardarComprobante, uploadComprobante, urlComprobante, urlTemporalComprobante,
 } from '../middlewares/comprobante.middleware.js';
+import fs from 'fs';
 import { successResponse, errorResponse } from '../utils/response.js';
+import { cloudinaryConfigurado } from '../utils/almacenamiento.js';
 
 const router = Router();
 
@@ -23,19 +25,21 @@ router.post('/', async (req, res, next) => {
     return next(error);
   }
 
-  return uploadComprobante.single('comprobante')(req, res, (err) => {
+  return uploadComprobante.single('comprobante')(req, res, async (err) => {
     if (err) {
       const mensaje = err.code === 'LIMIT_FILE_SIZE' ? 'El comprobante supera el máximo de 5 MB' : err.message;
       return errorResponse(res, mensaje || 'No se pudo subir el comprobante', 400);
     }
     if (!req.file) return errorResponse(res, 'Adjunta el comprobante en el campo "comprobante"', 400);
+    let archivo;
     try {
-      verificarFirma(req.file);
+      archivo = await guardarComprobante(req.file, req.user.id_usuario);
     } catch (error) {
-      return errorResponse(res, error.message, 400);
+      if (error.statusCode === 400) return errorResponse(res, error.message, 400);
+      return next(error);
     }
     return successResponse(res, {
-      url: urlComprobante(req.file.filename),
+      url: urlComprobante(archivo),
       nombre_original: req.file.originalname,
       tipo: req.file.mimetype,
       tamano: req.file.size,
@@ -52,6 +56,10 @@ router.get('/:archivo', async (req, res, next) => {
     const esPersonal = req.user.rol !== 'Cliente'
       && (await tienePermiso(req.user.id_rol, [['abonos', 'ver'], ['pedidos', 'ver']]));
     if (!esDuenio && !esPersonal) return errorResponse(res, 'Comprobante no encontrado', 404);
+    // Sin copia en disco y con Cloudinary: enlace temporal firmado (10 minutos).
+    if (!fs.existsSync(archivo.ruta) && cloudinaryConfigurado()) {
+      return res.redirect(302, urlTemporalComprobante(req.params.archivo));
+    }
     res.set('Cache-Control', 'private, max-age=300');
     return res.sendFile(archivo.ruta, (err) => {
       if (err && !res.headersSent) errorResponse(res, 'Comprobante no encontrado', 404);

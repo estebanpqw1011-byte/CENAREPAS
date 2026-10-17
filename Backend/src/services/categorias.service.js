@@ -1,5 +1,27 @@
 import { query } from '../config/db.js';
 import { eliminarSinAsociados } from '../utils/eliminacion.js';
+import { borrarArchivo, publicIdDeUrlLocal } from '../utils/almacenamiento.js';
+
+/**
+ * Cambio de imagen al editar: quitar_imagen = true la borra; un imagen_url
+ * distinto la reemplaza (con su imagen_public_id). Devuelve null si no cambia;
+ * si cambia, { url, publicId, anterior } (anterior = public_id a borrar).
+ */
+async function cambioDeImagen(id, data) {
+  const quitar = data.quitar_imagen === true;
+  const nueva = data.imagen_url;
+  if (!quitar && (nueva === undefined || nueva === null || nueva === '')) return null;
+  const res = await query('SELECT imagen_url, imagen_public_id FROM categoria_producto WHERE id_categoria = $1', [id]);
+  const actual = res.rows[0];
+  if (!actual) return null;
+  if (!quitar && nueva === actual.imagen_url) return null;
+  return {
+    url: quitar ? null : nueva,
+    publicId: quitar ? null : data.imagen_public_id || publicIdDeUrlLocal(nueva),
+    anterior: actual.imagen_public_id || publicIdDeUrlLocal(actual.imagen_url),
+  };
+}
+
 
 export class CategoriasService {
   /**
@@ -35,33 +57,38 @@ export class CategoriasService {
 
   static async create(data) {
     const { nombre, descripcion, estado = 'Activo', imagen_url = null } = data;
+    const imagenPublicId = imagen_url ? data.imagen_public_id || publicIdDeUrlLocal(imagen_url) : null;
     const res = await query(
-      `INSERT INTO categoria_producto (nombre, descripcion, estado, imagen_url)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO categoria_producto (nombre, descripcion, estado, imagen_url, imagen_public_id)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [nombre, descripcion, estado, imagen_url]
+      [nombre, descripcion, estado, imagen_url, imagenPublicId]
     );
     return res.rows[0];
   }
 
   static async update(id, data) {
-    const { nombre, descripcion, estado, imagen_url } = data;
+    const { nombre, descripcion, estado } = data;
+    const imagen = await cambioDeImagen(id, data);
     const res = await query(
       `UPDATE categoria_producto 
        SET nombre = COALESCE($1, nombre),
            descripcion = COALESCE($2, descripcion),
            estado = COALESCE($3, estado),
-           imagen_url = COALESCE($4, imagen_url)
+           imagen_url = CASE WHEN $6::boolean THEN $4 ELSE imagen_url END,
+           imagen_public_id = CASE WHEN $6::boolean THEN $7 ELSE imagen_public_id END
        WHERE id_categoria = $5
        RETURNING *`,
-      [nombre, descripcion, estado, imagen_url, id]
+      [nombre, descripcion, estado, imagen?.url ?? null, id, imagen !== null, imagen?.publicId ?? null]
     );
+    // La imagen anterior se borra solo si el cambio se guardó.
+    if (res.rows[0] && imagen?.anterior) await borrarArchivo(imagen.anterior);
     return res.rows[0] || null;
   }
 
   /** Borrado definitivo: solo sin productos (activos o inactivos); si no, 409 y se ofrece inactivar. */
-  static eliminarDefinitivo(id) {
-    return eliminarSinAsociados({
+  static async eliminarDefinitivo(id) {
+    const fila = await eliminarSinAsociados({
       tabla: 'categoria_producto',
       llave: 'id_categoria',
       id,
@@ -70,6 +97,8 @@ export class CategoriasService {
         { sql: 'SELECT 1 FROM producto WHERE id_categoria = $1', mensaje: 'Esta categoría tiene productos asociados; puedes inactivarla.' },
       ],
     });
+    await borrarArchivo(fila.imagen_public_id || publicIdDeUrlLocal(fila.imagen_url));
+    return fila;
   }
 
   /** Inactiva el registro (sin borrado físico: conserva el historial). */

@@ -45,3 +45,6 @@ Base_Datos/respaldos/
 
 # Comprobantes de pago (datos de clientes, nunca al repositorio)
 Backend/comprobantes/
+
+# Facturas de compras guardadas en disco (sin Cloudinary): privadas
+Backend/archivos_privados/
