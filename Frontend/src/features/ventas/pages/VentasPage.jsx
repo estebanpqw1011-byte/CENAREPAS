@@ -5,12 +5,9 @@ import { getClientes } from '../../clientes/services/clientesService';
 import { getUsuarios } from '../../usuarios/services/usuariosService';
 import { DataTable } from '../../../shared/components/DataTable';
 import { RowActions } from '../../../shared/components/RowActions';
-import { VentaFormModal } from '../components/VentaFormModal';
-import ConfirmDialog from '../../../shared/components/ConfirmDialog';
 import DetailModal from '../../../shared/components/DetailModal';
 import PageHeader from '../../../shared/components/PageHeader';
 import { MetricCard } from '../../../shared/components/MetricCard';
-import { usePermissions } from '../../../shared/contexts/PermissionContext';
 import EstadoBadge from '../../../shared/ui/EstadoBadge';
 import { CustomSelect } from '../../../shared/components/CustomSelect';
 import ErrorBanner from '../../../shared/components/ErrorBanner';
@@ -18,28 +15,18 @@ import { exportToPdf } from '../../../shared/utils/exportToPdf';
 import { exportToExcel } from '../../../shared/utils/exportToExcel';
 
 export default function VentasPage() {
-  const { can } = usePermissions();
   const {
     rawVentas,
     searchQuery,
     setSearchQuery,
     estadoFilter,
     setEstadoFilter,
-    showModal,
-    setShowModal,
     detailModal,
     setDetailModal,
-    deleteDialog,
-    setDeleteDialog,
-    isDeleting,
-    isSaving,
     isLoading,
     loadError,
     refetch,
-    handleSave,
-    handleAnular,
   } = useVentas();
-  const [selectedVenta, setSelectedVenta] = useState(null);
   const [clientes, setClientes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
 
@@ -150,27 +137,12 @@ export default function VentasPage() {
         key: 'acciones',
         label: 'Acciones',
         render: (_, venta) => (
-          <RowActions
-            onView={() => setDetailModal({ isOpen: true, data: venta })}
-            onEdit={() => {
-              setSelectedVenta(venta);
-              setShowModal(true);
-            }}
-            editDisabled={!can('ventas', 'editar')}
-            onDelete={() =>
-              setDeleteDialog({
-                isOpen: true,
-                id: venta.id_venta,
-                nombre: `Venta #${venta.id_venta}`,
-              })
-            }
-            deleteDisabled={!can('ventas', 'eliminar') || String(venta.estado).toLowerCase() === 'anulada'}
-            deleteTitle="Anular Venta"
-          />
+          // Solo lectura: una venta es un pedido Entregado (se anula desde Pedidos).
+          <RowActions onView={() => setDetailModal({ isOpen: true, data: venta })} />
         ),
       },
     ],
-    [can, clientesNames, usuariosNames, setDetailModal, setShowModal, setDeleteDialog]
+    [clientesNames, usuariosNames, setDetailModal]
   );
 
   const handleExportPdf = () => {
@@ -231,13 +203,7 @@ export default function VentasPage() {
     <div className="space-y-6">
       <PageHeader
         title="Ventas"
-        subtitle="Registro de ventas realizadas en Masarepas"
-        addLabel="Nueva Venta"
-        addDisabled={!can('ventas', 'crear')}
-        onAdd={() => {
-          setSelectedVenta(null);
-          setShowModal(true);
-        }}
+        subtitle="Pedidos entregados (solo lectura). Para registrar una venta, entrega el pedido desde Pedidos."
         onExportPdf={handleExportPdf}
         onExportExcel={handleExportExcel}
       />
@@ -256,12 +222,6 @@ export default function VentasPage() {
         isLoading={isLoading}
         emptyIcon={DollarSign}
         entityName="ventas"
-        onAdd={() => {
-          setSelectedVenta(null);
-          setShowModal(true);
-        }}
-        addLabel="Nueva Venta"
-        addDisabled={!can('ventas', 'crear')}
         isFiltered={Boolean(searchQuery || estadoFilter !== 'Todos')}
         searchPlaceholder="Buscar por ID, cliente, sede o medio de pago..."
         searchValue={searchQuery}
@@ -322,25 +282,6 @@ export default function VentasPage() {
           },
           { label: 'Estado', value: detailModal.data.estado },
         ] : []}
-      />
-      <VentaFormModal
-        open={showModal}
-        venta={selectedVenta}
-        onSave={handleSave}
-        isLoading={isSaving}
-        onClose={() => {
-          setShowModal(false);
-          setSelectedVenta(null);
-        }}
-      />
-      <ConfirmDialog
-        isOpen={deleteDialog.isOpen}
-        title="Anular Venta"
-        message={`¿Estás seguro de que deseas anular la venta "${deleteDialog.nombre}"? Esta acción no se puede deshacer.`}
-        confirmText="Anular"
-        onConfirm={handleAnular}
-        onCancel={() => setDeleteDialog({ isOpen: false, id: null, nombre: '' })}
-        isLoading={isDeleting}
       />
     </div>
   );

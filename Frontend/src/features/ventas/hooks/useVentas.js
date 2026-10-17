@@ -1,16 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getVentas, createVenta, updateVenta } from '../services/ventasService';
-import { toast } from '../../../shared/utils/toast';
+import { getVentas } from '../services/ventasService';
 
 export function useVentas() {
   const [ventas, setVentas] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('Todos');
-  const [showModal, setShowModal] = useState(false);
   const [detailModal, setDetailModal] = useState({ isOpen: false, data: null });
-  const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, id: null, nombre: '' });
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
@@ -45,45 +40,8 @@ export function useVentas() {
     });
   }, [ventas, searchQuery, estadoFilter]);
 
-  const handleSave = async (formData) => {
-    setIsSaving(true);
-    try {
-      if (formData.id_venta) {
-        const updated = await updateVenta(formData.id_venta, formData);
-        setVentas((prev) =>
-          prev.map((v) => (v.id_venta === formData.id_venta ? { ...v, ...updated } : v))
-        );
-        toast.success('Cambios guardados');
-      } else {
-        const created = await createVenta(formData);
-        setVentas((prev) => [created, ...prev]);
-        toast.success('Venta registrada');
-      }
-      setShowModal(false);
-    } catch (error) {
-      toast.error(error?.data?.message || 'No se pudo guardar la venta');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleAnular = async () => {
-    if (!deleteDialog.id) return;
-    setIsDeleting(true);
-    try {
-      await updateVenta(deleteDialog.id, { estado: 'anulada' });
-      setVentas((prev) =>
-        prev.map((v) => (v.id_venta === deleteDialog.id ? { ...v, estado: 'anulada' } : v))
-      );
-      toast.success('Venta anulada correctamente');
-    } catch {
-      toast.error('No se pudo anular la venta');
-    } finally {
-      setIsDeleting(false);
-      setDeleteDialog({ isOpen: false, id: null, nombre: '' });
-    }
-  };
-
+  // Solo lectura: el backend responde 405 a crear, editar o anular ventas (una venta
+  // es un pedido Entregado; se anula desde Pedidos).
   return {
     ventas: filteredVentas,
     rawVentas: ventas,
@@ -91,18 +49,10 @@ export function useVentas() {
     setSearchQuery,
     estadoFilter,
     setEstadoFilter,
-    showModal,
-    setShowModal,
     detailModal,
     setDetailModal,
-    deleteDialog,
-    setDeleteDialog,
-    isDeleting,
-    isSaving,
     isLoading,
     loadError,
     refetch: fetchVentas,
-    handleSave,
-    handleAnular,
   };
 }
