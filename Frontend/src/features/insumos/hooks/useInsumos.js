@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getInsumos, createInsumo, updateInsumo, deleteInsumo } from '../services/insumosService';
+import { getInsumos, createInsumo, updateInsumo, deleteInsumo, cambiarEstadoInsumo } from '../services/insumosService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useInsumos() {
@@ -101,21 +101,18 @@ export function useInsumos() {
     setIsUpdatingStatus(true);
     try {
       const { id_insumo, nombre } = statusDialog.insumo;
-      await updateInsumo(id_insumo, {
-        ...statusDialog.insumo,
-        estado: statusDialog.nextEstado,
-      });
+      const actualizado = await cambiarEstadoInsumo(id_insumo, statusDialog.nextEstado);
 
       setInsumos((prev) =>
         prev.map((i) =>
-          i.id_insumo === id_insumo ? { ...i, estado: statusDialog.nextEstado } : i
+          i.id_insumo === id_insumo ? { ...i, estado: actualizado?.estado || statusDialog.nextEstado } : i
         )
       );
 
       toast.success(`Estado del insumo "${nombre}" cambiado a ${statusDialog.nextEstado}`);
       setStatusDialog({ isOpen: false, insumo: null, nextEstado: 'Activo' });
     } catch (error) {
-      toast.error('No se pudo actualizar el estado del insumo');
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado del insumo');
     } finally {
       setIsUpdatingStatus(false);
     }

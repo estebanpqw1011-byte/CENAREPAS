@@ -18,3 +18,8 @@ export const updateInsumo = async (id_insumo, insumo) => {
 export const deleteInsumo = async (id_insumo) => {
   return api.delete(`/insumos/${id_insumo}`);
 };
+
+/** Activa o inactiva (PATCH /insumos/:id/estado); devuelve el registro actualizado. */
+export const cambiarEstadoInsumo = async (id, estado) => {
+  return api.patch(`/insumos/${id}/estado`, { estado });
+};

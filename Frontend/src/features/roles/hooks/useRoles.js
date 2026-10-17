@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getRoles, createRol, updateRol, deleteRol } from '../services/rolesService';
+import { getRoles, createRol, updateRol, deleteRol, cambiarEstadoRol } from '../services/rolesService';
 import { toast } from '../../../shared/utils/toast';
 
 export const isAdminRole = (rol) => {
@@ -129,21 +129,18 @@ export function useRoles() {
     setIsUpdatingStatus(true);
     try {
       const { id_rol, nombre } = statusDialog.rol;
-      await updateRol(id_rol, {
-        ...statusDialog.rol,
-        estado: statusDialog.nextEstado,
-      });
+      const actualizado = await cambiarEstadoRol(id_rol, statusDialog.nextEstado);
 
       setRoles((prev) =>
         prev.map((r) =>
-          r.id_rol === id_rol ? { ...r, estado: statusDialog.nextEstado } : r
+          r.id_rol === id_rol ? { ...r, estado: actualizado?.estado || statusDialog.nextEstado } : r
         )
       );
 
       toast.success(`Estado del rol "${nombre}" cambiado a ${statusDialog.nextEstado}`);
       setStatusDialog({ isOpen: false, rol: null, nextEstado: 'Activo' });
     } catch (error) {
-      toast.error('No se pudo actualizar el estado del rol');
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado del rol');
     } finally {
       setIsUpdatingStatus(false);
     }

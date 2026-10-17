@@ -26,3 +26,8 @@ export const updateFichaTecnica = async (id_ficha, ficha) => {
 export const deleteFichaTecnica = async (id_ficha) => {
   return api.delete(`/fichas-tecnicas/${id_ficha}`);
 };
+
+/** Activa o inactiva (PATCH /fichas-tecnicas/:id/estado); devuelve el registro actualizado. */
+export const cambiarEstadoFichaTecnica = async (id, estado) => {
+  return api.patch(`/fichas-tecnicas/${id}/estado`, { estado });
+};

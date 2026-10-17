@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getFichasTecnicas, createFichaTecnica, updateFichaTecnica, deleteFichaTecnica } from '../services/fichasTecnicasService';
+import { getFichasTecnicas, createFichaTecnica, updateFichaTecnica, deleteFichaTecnica, cambiarEstadoFichaTecnica } from '../services/fichasTecnicasService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useFichasTecnicas() {
@@ -98,21 +98,18 @@ export function useFichasTecnicas() {
     setIsUpdatingStatus(true);
     try {
       const { id_ficha, nombre } = statusDialog.ficha;
-      await updateFichaTecnica(id_ficha, {
-        ...statusDialog.ficha,
-        estado: statusDialog.nextEstado,
-      });
+      const actualizado = await cambiarEstadoFichaTecnica(id_ficha, statusDialog.nextEstado);
 
       setFichas((prev) =>
         prev.map((f) =>
-          f.id_ficha === id_ficha ? { ...f, estado: statusDialog.nextEstado } : f
+          f.id_ficha === id_ficha ? { ...f, estado: actualizado?.estado || statusDialog.nextEstado } : f
         )
       );
 
       toast.success(`Estado de la receta "${nombre}" cambiado a ${statusDialog.nextEstado}`);
       setStatusDialog({ isOpen: false, ficha: null, nextEstado: 'Activo' });
     } catch (error) {
-      toast.error('No se pudo actualizar el estado de la ficha técnica');
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado de la ficha técnica');
     } finally {
       setIsUpdatingStatus(false);
     }

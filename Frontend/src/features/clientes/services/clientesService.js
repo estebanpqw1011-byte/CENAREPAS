@@ -18,3 +18,8 @@ export const updateCliente = async (id_cliente, cliente) => {
 export const deleteCliente = async (id_cliente) => {
   return api.delete(`/clientes/${id_cliente}`);
 };
+
+/** Activa o inactiva (PATCH /clientes/:id/estado); devuelve el registro actualizado. */
+export const cambiarEstadoCliente = async (id, estado) => {
+  return api.patch(`/clientes/${id}/estado`, { estado });
+};

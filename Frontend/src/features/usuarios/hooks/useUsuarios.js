@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from '../services/usuariosService';
+import { getUsuarios, createUsuario, updateUsuario, deleteUsuario, cambiarEstadoUsuario } from '../services/usuariosService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useUsuarios() {
@@ -103,21 +103,18 @@ export function useUsuarios() {
     setIsUpdatingStatus(true);
     try {
       const { id_usuario, nombre } = statusDialog.usuario;
-      await updateUsuario(id_usuario, {
-        ...statusDialog.usuario,
-        estado: statusDialog.nextEstado,
-      });
+      const actualizado = await cambiarEstadoUsuario(id_usuario, statusDialog.nextEstado);
 
       setUsuarios((prev) =>
         prev.map((u) =>
-          u.id_usuario === id_usuario ? { ...u, estado: statusDialog.nextEstado } : u
+          u.id_usuario === id_usuario ? { ...u, estado: actualizado?.estado || statusDialog.nextEstado } : u
         )
       );
 
       toast.success(`Estado del usuario "${nombre}" cambiado a ${statusDialog.nextEstado}`);
       setStatusDialog({ isOpen: false, usuario: null, nextEstado: 'Activo' });
     } catch (error) {
-      toast.error('No se pudo actualizar el estado del usuario');
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado del usuario');
     } finally {
       setIsUpdatingStatus(false);
     }

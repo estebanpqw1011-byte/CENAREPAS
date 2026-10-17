@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getClientes, createCliente, updateCliente, deleteCliente } from '../services/clientesService';
+import { getClientes, createCliente, updateCliente, deleteCliente, cambiarEstadoCliente } from '../services/clientesService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useClientes() {
@@ -104,21 +104,18 @@ export function useClientes() {
     setIsUpdatingStatus(true);
     try {
       const { id_cliente, nombre, direccion } = statusDialog.cliente;
-      await updateCliente(id_cliente, {
-        ...statusDialog.cliente,
-        estado: statusDialog.nextEstado,
-      });
+      const actualizado = await cambiarEstadoCliente(id_cliente, statusDialog.nextEstado);
 
       setClientes((prev) =>
         prev.map((c) =>
-          c.id_cliente === id_cliente ? { ...c, estado: statusDialog.nextEstado } : c
+          c.id_cliente === id_cliente ? { ...c, estado: actualizado?.estado || statusDialog.nextEstado } : c
         )
       );
 
       toast.success(`Estado del cliente "${nombre}" cambiado a ${statusDialog.nextEstado}`);
       setStatusDialog({ isOpen: false, cliente: null, nextEstado: 'Activo' });
     } catch (error) {
-      toast.error('No se pudo actualizar el estado del cliente');
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado del cliente');
     } finally {
       setIsUpdatingStatus(false);
     }

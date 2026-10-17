@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCategorias, createCategoria, updateCategoria, deleteCategoria } from '../services/categoriasService';
+import { getCategorias, createCategoria, updateCategoria, deleteCategoria, cambiarEstadoCategoria } from '../services/categoriasService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useCategorias() {
@@ -93,21 +93,18 @@ export function useCategorias() {
     setIsUpdatingStatus(true);
     try {
       const { id_categoria, nombre } = statusDialog.categoria;
-      await updateCategoria(id_categoria, {
-        ...statusDialog.categoria,
-        estado: statusDialog.nextEstado,
-      });
+      const actualizado = await cambiarEstadoCategoria(id_categoria, statusDialog.nextEstado);
 
       setCategorias((prev) =>
         prev.map((c) =>
-          c.id_categoria === id_categoria ? { ...c, estado: statusDialog.nextEstado } : c
+          c.id_categoria === id_categoria ? { ...c, estado: actualizado?.estado || statusDialog.nextEstado } : c
         )
       );
 
       toast.success(`Estado de la categoría "${nombre}" cambiado a ${statusDialog.nextEstado}`);
       setStatusDialog({ isOpen: false, categoria: null, nextEstado: 'Activo' });
     } catch (error) {
-      toast.error('No se pudo actualizar el estado de la categoría');
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado de la categoría');
     } finally {
       setIsUpdatingStatus(false);
     }

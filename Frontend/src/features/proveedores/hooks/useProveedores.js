@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getProveedores, createProveedor, updateProveedor, deleteProveedor } from '../services/proveedoresService';
+import { getProveedores, createProveedor, updateProveedor, deleteProveedor, cambiarEstadoProveedor } from '../services/proveedoresService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useProveedores() {
@@ -99,21 +99,18 @@ export function useProveedores() {
     setIsUpdatingStatus(true);
     try {
       const { id_proveedor, nombre } = statusDialog.proveedor;
-      await updateProveedor(id_proveedor, {
-        ...statusDialog.proveedor,
-        estado: statusDialog.nextEstado,
-      });
+      const actualizado = await cambiarEstadoProveedor(id_proveedor, statusDialog.nextEstado);
 
       setProveedores((prev) =>
         prev.map((p) =>
-          p.id_proveedor === id_proveedor ? { ...p, estado: statusDialog.nextEstado } : p
+          p.id_proveedor === id_proveedor ? { ...p, estado: actualizado?.estado || statusDialog.nextEstado } : p
         )
       );
 
       toast.success(`Estado del proveedor "${nombre}" cambiado a ${statusDialog.nextEstado}`);
       setStatusDialog({ isOpen: false, proveedor: null, nextEstado: 'Activo' });
     } catch (error) {
-      toast.error('No se pudo actualizar el estado del proveedor');
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado del proveedor');
     } finally {
       setIsUpdatingStatus(false);
     }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getProductos, createProducto, updateProducto, deleteProducto } from '../services/productosService';
+import { getProductos, createProducto, updateProducto, deleteProducto, cambiarEstadoProducto } from '../services/productosService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useProductos() {
@@ -106,21 +106,18 @@ export function useProductos() {
     setIsUpdatingStatus(true);
     try {
       const { id_producto, nombre } = statusDialog.producto;
-      await updateProducto(id_producto, {
-        ...statusDialog.producto,
-        estado: statusDialog.nextEstado,
-      });
+      const actualizado = await cambiarEstadoProducto(id_producto, statusDialog.nextEstado);
 
       setProductos((prev) =>
         prev.map((p) =>
-          p.id_producto === id_producto ? { ...p, estado: statusDialog.nextEstado } : p
+          p.id_producto === id_producto ? { ...p, estado: actualizado?.estado || statusDialog.nextEstado } : p
         )
       );
 
       toast.success(`Estado del producto "${nombre}" cambiado a ${statusDialog.nextEstado}`);
       setStatusDialog({ isOpen: false, producto: null, nextEstado: 'Activo' });
     } catch (error) {
-      toast.error('No se pudo actualizar el estado del producto');
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado del producto');
     } finally {
       setIsUpdatingStatus(false);
     }
