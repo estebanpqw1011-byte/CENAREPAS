@@ -5,7 +5,6 @@ import { DataTable } from '../../../shared/components/DataTable';
 import { RowActions } from '../../../shared/components/RowActions';
 import { CategoriaFormModal } from '../components/CategoriaFormModal';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
-import DetailModal from '../../../shared/components/DetailModal';
 import PageHeader from '../../../shared/components/PageHeader';
 import { MetricCard } from '../../../shared/components/MetricCard';
 import { usePermissions } from '../../../shared/contexts/PermissionContext';
@@ -203,16 +202,12 @@ export default function CategoriasPage() {
         }
       />
 
-      <DetailModal
-        isOpen={detailModal.isOpen}
+      {/* Ver detalle: el mismo formulario que crear y editar, en modo de solo lectura */}
+      <CategoriaFormModal
+        open={detailModal.isOpen}
+        categoria={detailModal.data}
+        modo="ver"
         onClose={() => setDetailModal({ isOpen: false, data: null })}
-        title="Detalle de Categoría"
-        fields={detailModal.data ? [
-          { label: 'ID', value: detailModal.data.id_categoria },
-          { label: 'Nombre', value: detailModal.data.nombre },
-          { label: 'Descripción', value: detailModal.data.descripcion },
-          { label: 'Estado', value: detailModal.data.estado },
-        ] : []}
       />
 
       <CategoriaFormModal

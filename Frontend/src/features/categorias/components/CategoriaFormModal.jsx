@@ -3,7 +3,14 @@ import { FolderTree } from 'lucide-react';
 import { Combobox } from '../../../shared/ui/Combobox';
 import { StepperModal } from '../../../shared/components/StepperModal';
 
-export function CategoriaFormModal({ open, onClose, categoria = null, onSave, isLoading = false }) {
+/**
+ * Formulario único de categorías. modo: 'crear' | 'editar' | 'ver' (por
+ * defecto, 'editar' si llega una categoría y 'crear' si no). En 'ver' todos
+ * los campos son de solo lectura y no hay botón de guardar.
+ */
+export function CategoriaFormModal({ open, onClose, categoria = null, onSave, isLoading = false, modo }) {
+  const modoActual = modo || (categoria ? 'editar' : 'crear');
+  const soloLectura = modoActual === 'ver';
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [estado, setEstado] = useState('Activo');
@@ -24,7 +31,7 @@ export function CategoriaFormModal({ open, onClose, categoria = null, onSave, is
   }, [categoria, open]);
 
   const isDirty = useMemo(() => {
-    if (!open) return false;
+    if (!open || soloLectura) return false;
     if (!categoria) {
       return nombre.trim() !== '' || descripcion.trim() !== '';
     }
@@ -33,7 +40,7 @@ export function CategoriaFormModal({ open, onClose, categoria = null, onSave, is
       descripcion !== (categoria.descripcion || '') ||
       estado !== (categoria.estado || 'Activo')
     );
-  }, [open, categoria, nombre, descripcion, estado]);
+  }, [open, soloLectura, categoria, nombre, descripcion, estado]);
 
   const validateStep = useCallback(() => {
     if (!nombre.trim()) {
@@ -80,7 +87,8 @@ export function CategoriaFormModal({ open, onClose, categoria = null, onSave, is
                 name="nombre"
                 type="text"
                 maxLength={80}
-                autoFocus
+                autoFocus={!soloLectura}
+                readOnly={soloLectura}
                 placeholder="Ej. Arepas Tradicionales, Línea Queso..."
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
@@ -99,6 +107,7 @@ export function CategoriaFormModal({ open, onClose, categoria = null, onSave, is
               name="estado"
               value={estado}
               onChange={(e) => setEstado(e.target.value)}
+              disabled={soloLectura}
               options={[
                 { value: 'Activo', label: 'Activo' },
                 { value: 'Inactivo', label: 'Inactivo' },
@@ -116,6 +125,7 @@ export function CategoriaFormModal({ open, onClose, categoria = null, onSave, is
               name="descripcion"
               maxLength={255}
               rows={3}
+              readOnly={soloLectura}
               placeholder="Describe las características principales de los productos en esta categoría..."
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
@@ -138,19 +148,20 @@ export function CategoriaFormModal({ open, onClose, categoria = null, onSave, is
         </div>
       ),
     },
-  ], [nombre, estado, descripcion, validateStep]);
+  ], [nombre, estado, descripcion, validateStep, soloLectura]);
 
   return (
     <StepperModal
       isOpen={open}
       onClose={onClose}
       category="CATEGORÍAS"
-      title={categoria ? 'Editar Categoría' : 'Nueva Categoría'}
+      title={{ crear: 'Nueva Categoría', editar: 'Editar Categoría', ver: 'Detalle de Categoría' }[modoActual]}
       subtitle="Organiza los productos terminados en familias y líneas de producción"
       steps={steps}
       onSubmit={handleSubmit}
       isLoading={isLoading}
-      submitLabel={categoria ? 'Guardar Cambios' : 'Crear Categoría'}
+      submitLabel={modoActual === 'editar' ? 'Guardar Cambios' : 'Crear Categoría'}
+      mode={soloLectura ? 'view' : modoActual === 'editar' ? 'edit' : 'create'}
       isDirty={isDirty}
     />
   );
