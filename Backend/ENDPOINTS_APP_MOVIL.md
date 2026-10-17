@@ -190,6 +190,23 @@ GET /ventas/8
         "saldo_pendiente": "105000.00", "detalles": [ { "id_detalle_venta": 5, … } ] } }
 ```
 
+## Mejoras de módulos (rama `feat/mejoras-modulos`, migración 012)
+
+Todo es compatible con lo que ya enviaban la web y la app: los campos nuevos son opcionales y `nombre` se sigue guardando.
+
+| Método | Ruta | Permiso | Cambio |
+|---|---|---|---|
+| PATCH | `/<modulo>/:id/estado` `{ estado }` | `<modulo>:cambiar_estado` | **Nuevo** en categorias, clientes, proveedores, insumos, productos, fichas-tecnicas, usuarios, roles y sedes. `estado`: Activo o Inactivo (sin distinguir mayúsculas). 200 con el registro actualizado; 400 si el estado no es válido; 404 si no existe. Usuarios: 409 si es el propio usuario o el último Administrador activo. Roles: 409 si es el rol Administrador. |
+| GET | `/opciones/:recurso` | ver el módulo, o crear/editar el módulo que lo usa | **Nuevo.** Para los selects: **solo registros activos**, como `[{ id, nombre, … }]`. Recursos: `clientes` (+ tipo_documento, documento), `productos` (+ precio_venta, stock_actual, id_categoria; solo de categorías activas), `proveedores` (+ tipo_documento, documento), `insumos` (+ unidad_medida, stock_actual), `categorias`, `fichas-tecnicas` (+ rendimiento_lote), `sedes`, `usuarios` (personal activo, + rol), `roles`. Listas fijas (cualquier sesión): `medios-pago`, `estados-pedido`, `tipos-documento`, `tipos-persona`, `municipios`. 404 si el recurso no existe; 403 sin permiso. |
+| POST/PUT | `/clientes`, `/proveedores` | crear / editar | **Modificado:** `tipo_persona` (Natural o Jurídica), `nombres` (máx. 75) y `apellidos` (máx. 74, opcionales) para Natural, o `razon_social` (3 a 150) para Jurídica. El backend arma `nombre` (nombres + apellidos o razón social). Si solo llega `nombre` (app, registro), se usa como nombres o razón social. Sin tipo de persona: Jurídica si el documento es NIT; si no, Natural. Proveedores: `tipo_documento` (por defecto NIT) y `nit` obligatorio (también acepta `documento`). En `PUT`, la persona solo cambia si llega alguno de esos campos. 400 con error por campo. |
+| POST/PUT | `/usuarios` | crear / editar | **Modificado:** `tipo_documento` + `documento` opcionales (van juntos; 5 a 20 letras, números, puntos o guiones). `null` en ambos los quita. 409 si el documento ya es de otro usuario. `GET /usuarios` los devuelve. |
+| POST | `/uploads` (multipart: `archivo` + `tipo`) | crear o editar del módulo del `tipo` | **Nuevo.** `tipo`: `producto` o `categoria` (JPG, PNG o WEBP) o `compra` (además PDF). Máximo 5 MB; se revisa la firma real del archivo. 201 → `{ url, public_id, recurso, formato, proveedor, nombre_original, tipo, tamano }`. Con las variables `CLOUDINARY_*` va a Cloudinary (las facturas, privadas); sin ellas, al disco del servidor (`public_id` = `local:<carpeta>/<archivo>`). 400 por tipo, formato o tamaño; 403 sin permiso. `POST /uploads/imagen` (campo `imagen`) se conserva. |
+| POST/PUT | `/productos`, `/categorias` | crear / editar | **Modificado:** guardan `imagen_public_id` junto a `imagen_url`. Un `imagen_url` distinto reemplaza la imagen y borra la anterior; `quitar_imagen: true` la quita y la borra; `imagen_url: null` sin `quitar_imagen` no cambia nada. El borrado definitivo también borra la imagen. |
+| POST/PUT | `/compras` | crear / editar | **Modificado:** soporte (factura) con `comprobante_public_id` y `comprobante_recurso` (`image` o `raw`) tal como los devuelve `POST /uploads` (tipo `compra`); otro valor → 400. Reemplazarlo borra el anterior; `quitar_comprobante: true` lo quita. Un `comprobante_url` suelto (antiguo) se sigue aceptando. Al crear, `id_usuario` es siempre el usuario con sesión. |
+| GET | `/compras/:id/comprobante` | compras:ver | **Nuevo.** `{ tipo, url }`: `temporal` (enlace firmado de Cloudinary, 10 minutos), `local` (la ruta de abajo) o `externo` (URL antigua). 404 si la compra no tiene soporte. |
+| GET | `/compras/:id/comprobante/archivo` | compras:ver | **Nuevo.** El soporte guardado en el disco, con sesión (no se sirve desde `/uploads`). |
+| POST/GET | `/comprobantes` | — | **Modificado:** con Cloudinary, el comprobante de pago se guarda allí (privado) y `GET /comprobantes/:archivo` redirige a un enlace temporal; la URL que recibe la app no cambia. |
+
 ## Configuración (`src/config/negocio.js`)
 
 | Constante | Valor | Uso |
