@@ -66,7 +66,7 @@ export default function CatalogoCarritoPage() {
           />
           <div className="flex justify-center pb-8">
             <Link
-              to="/"
+              to="/catalogo"
               className="inline-flex items-center gap-1.5 rounded-xl bg-[#C1502D] px-4 py-2.5 text-sm font-bold text-white shadow-xs transition-colors hover:bg-[#A84223]"
             >
               <ArrowLeft className="size-4" />
@@ -83,7 +83,7 @@ export default function CatalogoCarritoPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <Link
-            to="/"
+            to="/catalogo"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="size-4" />

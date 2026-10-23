@@ -13,7 +13,7 @@ import EmptyState from '../../../shared/components/EmptyState';
 function VolverACategorias() {
   return (
     <Link
-      to="/"
+      to="/catalogo"
       className="inline-flex items-center gap-1.5 rounded-lg text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D]"
     >
       <ArrowLeft className="size-4" />

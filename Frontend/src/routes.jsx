@@ -145,15 +145,16 @@ export function AppRoutes({ isAuthenticated, setIsAuthenticated }) {
 
   return (
     <Routes>
-      {/* ─── Catálogo público (primera pantalla, solo sin sesión) ─── */}
-      <Route element={<CatalogoPublicoGuard />}>
-        <Route path="/" element={<CatalogoCategoriasPage />} />
-        <Route path="/catalogo/categoria/:id" element={<CatalogoProductosPage />} />
-        <Route path="/catalogo/carrito" element={<CatalogoCarritoPage />} />
-      </Route>
-
       {/* ─── Rutas Públicas ─── */}
-      <Route path="/inicio" element={<LandingPage />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/inicio" element={<Navigate to="/" replace />} />
+
+      {/* ─── Catálogo público (solo sin sesión; con sesión, cada quien a su inicio) ─── */}
+      <Route path="/catalogo" element={<CatalogoPublicoGuard />}>
+        <Route index element={<CatalogoCategoriasPage />} />
+        <Route path="categoria/:id" element={<CatalogoProductosPage />} />
+        <Route path="carrito" element={<CatalogoCarritoPage />} />
+      </Route>
       <Route path="/login" element={<Navigate to="/admin/login" replace />} />
       <Route
         path="/admin/login"
@@ -174,7 +175,6 @@ export function AppRoutes({ isAuthenticated, setIsAuthenticated }) {
       <Route path="/compras" element={<ShortcutRedirect staffTarget="/admin/compras" />} />
       <Route path="/productos" element={<ShortcutRedirect staffTarget="/admin/productos" clienteTarget="/cliente/catalogo" />} />
       <Route path="/categorias" element={<ShortcutRedirect staffTarget="/admin/categorias" clienteTarget="/cliente/catalogo" />} />
-      <Route path="/catalogo" element={<ShortcutRedirect staffTarget="/admin/productos" clienteTarget="/cliente/catalogo" publicTarget="/" />} />
       <Route path="/carrito" element={<ShortcutRedirect staffTarget="/admin/pedidos" clienteTarget="/cliente/carrito" publicTarget="/catalogo/carrito" />} />
 
       {/* ─── Portal del Cliente (Solo rol Cliente) ─── */}

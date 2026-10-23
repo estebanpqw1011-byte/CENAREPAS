@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import { LogIn, Moon, Sun } from 'lucide-react';
 import { CatalogoCartProvider } from '../context/CatalogoCartContext';
 import CarritoBoton from '../components/CarritoBoton';
@@ -6,7 +6,7 @@ import { useTheme } from '../../../shared/contexts/ThemeContext';
 import cenarepasLogo from '../../../assets/cenarepas-icon.svg';
 
 /**
- * Catálogo público (sin sesión): encabezado con logo, "Conócenos" (landing),
+ * Catálogo público (sin sesión): encabezado con logo (lleva a la landing, /),
  * carrito siempre visible, tema e "Iniciar sesión". El carrito se conserva al
  * navegar porque el proveedor envuelve todas las páginas del catálogo.
  */
@@ -36,12 +36,6 @@ export default function CatalogoLayout() {
             </Link>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              <NavLink
-                to="/inicio"
-                className="rounded-xl px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground sm:text-sm"
-              >
-                Conócenos
-              </NavLink>
               <CarritoBoton />
               <button
                 type="button"
