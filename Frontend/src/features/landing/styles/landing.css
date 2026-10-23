@@ -39,9 +39,12 @@
   --landing-badge-gold-bg: #fce9c6;
   --landing-badge-gold-text: #8a5a14;
 
-  /* Tintes suaves para alternar fondos de sección */
-  --landing-tint-green: color-mix(in srgb, var(--landing-accent-green) 8%, var(--background));
-  --landing-tint-gold: color-mix(in srgb, var(--landing-accent-gold) 10%, var(--background));
+  /* Tintes suaves para alternar fondos de sección. Se mezclan con el crema fijo
+     (no con --background, que en tema oscuro es casi negro azulado y partía la
+     página en franjas): la landing usa siempre su propia paleta. */
+  --landing-crema: #fffbf0;
+  --landing-tint-green: color-mix(in srgb, var(--landing-accent-green) 8%, var(--landing-crema));
+  --landing-tint-gold: color-mix(in srgb, var(--landing-accent-gold) 10%, var(--landing-crema));
 
   /* Rampa negro-cálido cinematográfico */
   --landing-cine: #120b07;
@@ -50,8 +53,8 @@
 
   min-height: 100vh;
   overflow-x: hidden;
-  background: var(--background) !important;
-  color: var(--foreground) !important;
+  background: var(--landing-crema) !important;
+  color: #1c1917 !important;
   color-scheme: light;
   font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;
 }

@@ -71,8 +71,8 @@ export function SiteHeader() {
       <div
         className={`mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 rounded-full border px-3 transition-all duration-300 sm:h-16 sm:px-5 ${
           isHero
-            ? 'bg-transparent border-white/15 backdrop-blur-[2px] shadow-none hover:bg-white/[0.04]'
-            : 'bg-white/40 border-[#e8dcc0] shadow-sm backdrop-blur-md hover:bg-white/55'
+            ? 'bg-[#120b07]/35 border-white/10 backdrop-blur-md backdrop-saturate-150 shadow-none'
+            : 'bg-[#fffbf0]/85 border-[#e8dcc0] backdrop-blur-md shadow-[0_8px_24px_-14px_rgba(61,42,23,0.3)]'
         }`}
       >
         {/* Logo */}
@@ -139,7 +139,7 @@ export function SiteHeader() {
       <div
         className={`mx-auto mt-2 max-w-6xl overflow-hidden rounded-2xl border backdrop-blur-xl transition-all duration-300 lg:hidden ${
           open ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0'
-        } ${isHero ? 'border-white/15 bg-[#120b07]/80' : 'border-[#e8dcc0] bg-white/95'}`}
+        } ${isHero ? 'border-white/10 bg-[#120b07]/85' : 'border-[#e8dcc0] bg-[#fffbf0]/95'}`}
       >
         <nav className="flex flex-col gap-1 px-3 py-3">
           {NAV_LINKS.map((link) => {

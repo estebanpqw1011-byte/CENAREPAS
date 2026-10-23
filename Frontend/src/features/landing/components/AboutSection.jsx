@@ -129,7 +129,7 @@ export function AboutSection() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section id="nosotros" className="relative overflow-hidden -mt-px pt-10 sm:pt-14 pb-24 sm:pb-32 bg-[#fffbf0]">
+    <section id="nosotros" className="relative overflow-hidden -mt-px pt-10 sm:pt-14 pb-16 sm:pb-24 bg-[#fffbf0]">
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <motion.div

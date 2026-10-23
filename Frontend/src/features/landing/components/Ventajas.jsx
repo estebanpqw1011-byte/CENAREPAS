@@ -496,7 +496,7 @@ export function Ventajas() {
   return (
     <section
       id="ventajas"
-      className="relative py-24 sm:py-32 bg-[#fffbf0] text-slate-900 overflow-hidden"
+      className="relative py-20 sm:py-28 bg-[#fffbf0] text-slate-900 overflow-hidden"
     >
       {/* ─── Unión fluida en OKLCH entre Productos (tint-gold) y Ventajas (crema) ─── */}
       <SectionTransition from="var(--landing-tint-gold)" to="#fffbf0" height="h-16 sm:h-20" />

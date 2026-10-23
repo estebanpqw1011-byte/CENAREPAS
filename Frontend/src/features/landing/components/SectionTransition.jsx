@@ -11,6 +11,8 @@ import React from 'react';
 export function SectionTransition({
   from,
   to,
+  via = [], // paradas intermedias opcionales, p. ej. la rampa cálida oscuro → claro
+
   height = 'h-28 sm:h-36 md:h-44',
   position = 'top', // 'top' | 'bottom'
   className = '',
@@ -24,7 +26,7 @@ export function SectionTransition({
       style={{
         backgroundImage: `linear-gradient(in oklch to ${
           position === 'top' ? 'bottom' : 'top'
-        }, ${from}, ${to})`,
+        }, ${[from, ...via, to].join(', ')})`,
       }}
     />
   );

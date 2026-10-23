@@ -99,7 +99,7 @@ export function ContactSection() {
   };
 
   return (
-    <section id="contacto" className="relative py-24 sm:py-32 bg-[#fffbf0] text-slate-900 overflow-hidden">
+    <section id="contacto" className="relative py-16 sm:py-24 bg-[#fffbf0] text-slate-900 overflow-hidden">
       
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 

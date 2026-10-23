@@ -22,9 +22,9 @@ const itemVariants = {
 
 export function StatsSection() {
   return (
-    <section className="relative overflow-hidden bg-[var(--landing-tint-gold)] py-16 sm:py-20">
+    <section className="relative overflow-hidden bg-[var(--landing-tint-gold)] py-14 sm:py-16">
       {/* ─── Unión fluida entre Nosotros (#fffbf0) y Estadísticas (tint-gold) ─── */}
-      <SectionTransition from="#fffbf0" to="var(--landing-tint-gold)" height="h-16 sm:h-20" />
+      <SectionTransition from="#fffbf0" to="var(--landing-tint-gold)" height="h-12 sm:h-14" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
