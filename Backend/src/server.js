@@ -1,6 +1,7 @@
 import app from './app.js';
 import { env } from './config/env.js';
 import { checkDbConnection, checkMigraciones } from './config/db.js';
+import { estadoAlmacenamiento } from './utils/almacenamiento.js';
 
 // Variable de entorno PORT (la asigna Render); config.port usa 4000 si no llega.
 const PORT = env.port;
@@ -17,6 +18,10 @@ async function startServer() {
   } else {
     await checkMigraciones();
   }
+
+  // Dónde se guardan los archivos: Cloudinary, disco (solo local) o error (nube sin Cloudinary).
+  const almacenamiento = estadoAlmacenamiento();
+  (almacenamiento.nivel === 'error' ? console.error : almacenamiento.nivel === 'aviso' ? console.warn : console.log)(almacenamiento.mensaje);
 
   app.listen(PORT, () => {
     console.log(`✅ Servidor CENAREPAS Backend escuchando en http://localhost:${PORT}`);

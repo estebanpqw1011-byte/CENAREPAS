@@ -34,8 +34,13 @@ export const errorHandler = (err, req, res, next) => {
   }
 
   const status = err.statusCode || err.status || 500;
-  if (status >= 500) console.error('[Unhandled Server Error]:', err);
-  const message = status >= 500 ? 'Error interno en el servidor' : err.message;
+  // Un 5xx creado a propósito (502 de Cloudinary, 503 sin configurar) va en una línea; uno inesperado, con su stack.
+  if (status >= 500) {
+    if (err.expuesto) console.warn(`[${status}] ${err.message}`);
+    else console.error('[Unhandled Server Error]:', err);
+  }
+  // Un 5xx inesperado no muestra detalles; un HttpError creado a propósito sí (p. ej. 502 de Cloudinary).
+  const message = status >= 500 && !err.expuesto ? 'Error interno en el servidor' : err.message;
 
   return errorResponse(res, message, status, err.details || null);
 };

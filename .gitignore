@@ -13,6 +13,7 @@ Frontend/dist-ssr/
 .env
 .env.*
 !.env.example
+!.env.staging.example
 
 # IDE / Agent caches
 .gemini/
