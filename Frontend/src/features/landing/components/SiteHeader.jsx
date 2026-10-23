@@ -7,10 +7,21 @@ import cenarepasLogo from '../../../assets/cenarepas-icon.svg';
 const NAV_LINKS = [
   { label: 'Inicio', href: '#inicio' },
   { label: 'Nosotros', href: '#nosotros' },
-  { label: 'Productos', href: '#productos' },
+  // Sección que invita al catálogo público; se llega con scroll suave.
+  { label: 'Catálogo', href: '#catalogo', suave: true },
   { label: 'Ventajas', href: '#ventajas' },
   { label: 'Contacto', href: '#contacto' },
 ];
+
+/** Scroll suave hasta la sección (sin animación si se pidió reducir el movimiento). */
+function irASeccion(event, href) {
+  const destino = document.getElementById(href.slice(1));
+  if (!destino) return;
+  event.preventDefault();
+  const reducir = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  destino.scrollIntoView({ behavior: reducir ? 'auto' : 'smooth', block: 'start' });
+  window.history.replaceState(null, '', href);
+}
 
 export function SiteHeader() {
   const { nombreProyecto } = useConfiguracion();
@@ -89,6 +100,7 @@ export function SiteHeader() {
               <motion.a
                 key={link.href}
                 href={link.href}
+                onClick={link.suave ? (e) => irASeccion(e, link.href) : undefined}
                 className={linkClass(isActive)}
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.97 }}
@@ -136,7 +148,10 @@ export function SiteHeader() {
               <a
                 key={link.href}
                 href={link.href}
-                onClick={() => setOpen(false)}
+                onClick={(e) => {
+                  if (link.suave) irASeccion(e, link.href);
+                  setOpen(false);
+                }}
                 className={`rounded-full px-4 py-2.5 text-sm font-semibold transition-colors duration-200 ${
                   isActive
                     ? 'bg-[#c1502d] text-white'
