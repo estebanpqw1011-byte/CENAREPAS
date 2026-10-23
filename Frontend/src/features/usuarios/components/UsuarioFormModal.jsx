@@ -174,8 +174,8 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
             </p>
           </div>
 
-          {/* Tipo de documento */}
-          <div className="sm:col-span-1">
+          {/* Tipo de documento (fila propia, sobre el número) */}
+          <div className="sm:col-span-2">
             <label htmlFor="usuario_tipo_documento" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
               Tipo de documento
             </label>
@@ -189,7 +189,7 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
           </div>
 
           {/* Número de documento */}
-          <div className="sm:col-span-1">
+          <div className="sm:col-span-2">
             <label htmlFor="usuario_documento" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
               Número de documento <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
             </label>
@@ -289,8 +289,16 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
             </p>
           </div>
 
-          {/* Estado */}
-          <div className="sm:col-span-1">
+          {/* Ayuda contextual de seguridad */}
+          <div className="sm:col-span-2 p-3.5 rounded-xl bg-muted/40 border border-border/60 flex items-start gap-3 text-xs text-muted-foreground">
+            <CheckCircle2 className="size-4 text-[#5A7A3A] shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-foreground block mb-0.5">Control de acceso</span>
+              Los permisos específicos asignados a este usuario dependerán automáticamente del rol seleccionado.
+            </div>
+          </div>
+          {/* Estado (fila completa, último campo) */}
+          <div className="sm:col-span-2">
             <label htmlFor="usuario_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
               Estado de la cuenta <span className="text-destructive font-bold ml-0.5">*</span>
             </label>
@@ -306,14 +314,6 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
             />
           </div>
 
-          {/* Ayuda contextual de seguridad */}
-          <div className="sm:col-span-2 p-3.5 rounded-xl bg-muted/40 border border-border/60 flex items-start gap-3 text-xs text-muted-foreground">
-            <CheckCircle2 className="size-4 text-[#5A7A3A] shrink-0 mt-0.5" />
-            <div>
-              <span className="font-semibold text-foreground block mb-0.5">Control de acceso</span>
-              Los permisos específicos asignados a este usuario dependerán automáticamente del rol seleccionado.
-            </div>
-          </div>
         </div>
       ),
     },

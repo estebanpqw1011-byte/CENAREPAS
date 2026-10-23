@@ -268,8 +268,8 @@ export default function Register() {
               )}
             </div>
 
-            {/* 2. Documento: Tipo y Número (2 columnas) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {/* 2. Documento: Tipo (fila propia) y, debajo, Número */}
+            <div className="grid grid-cols-1 gap-2.5">
               <div>
                 <label htmlFor="reg-tipo-doc" className="block text-xs font-bold text-foreground/90 mb-1">
                   Tipo Doc. <span className="text-[#C1502D]">*</span>
@@ -289,7 +289,7 @@ export default function Register() {
                 </div>
               </div>
 
-              <div className="sm:col-span-2">
+              <div>
                 <label htmlFor="reg-doc" className="block text-xs font-bold text-foreground/90 mb-1">
                   Número de Documento <span className="text-[#C1502D]">*</span>
                 </label>

@@ -179,41 +179,6 @@ export function RoleFormModal({ open, onClose, role = null, onSave, isLoading = 
             </div>
           </div>
 
-          {/* Estado del Rol */}
-          <div className="sm:col-span-2">
-            <label htmlFor="rol_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Estado operativo <span className="text-destructive font-bold ml-0.5">*</span>
-            </label>
-            {isAdmin ? (
-              <div className="space-y-1.5">
-                <div className="h-10 px-4 rounded-lg border border-border bg-muted/60 text-sm font-medium text-foreground flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <span className="size-2 rounded-full bg-[#5A7A3A]" />
-                    <span>Activo</span>
-                  </span>
-                  <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
-                    Rol Principal Bloqueado
-                  </span>
-                </div>
-                <p className="text-xs text-[#C1502D] dark:text-[#E8B23D] flex items-center gap-1.5 font-medium">
-                  <ShieldAlert className="size-3.5 shrink-0" />
-                  El rol Administrador es el eje principal del sistema y no puede desactivarse.
-                </p>
-              </div>
-            ) : (
-              <Combobox
-                id="rol_estado"
-                name="estado"
-                value={estado}
-                onChange={(e) => setEstado(e.target.value)}
-                options={[
-                  { value: 'Activo', label: 'Activo (Habilitado para asignar usuarios)' },
-                  { value: 'Inactivo', label: 'Inactivo (Deshabilitado temporalmente)' },
-                ]}
-              />
-            )}
-          </div>
-
           {/* Ayuda contextual */}
           <div className="sm:col-span-2 p-3.5 rounded-xl bg-muted/40 border border-border/60 flex items-start gap-3 text-xs text-muted-foreground">
             <Layers className="size-4 text-[#C1502D] dark:text-[#E8B23D] shrink-0 mt-0.5" />
@@ -333,6 +298,41 @@ export function RoleFormModal({ open, onClose, role = null, onSave, isLoading = 
                 </div>
               );
             })}
+          </div>
+
+          {/* Estado del Rol (fila completa, último campo) */}
+          <div className="w-full pt-1">
+            <label htmlFor="rol_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Estado operativo <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
+            {isAdmin ? (
+              <div className="space-y-1.5">
+                <div className="h-10 px-4 rounded-lg border border-border bg-muted/60 text-sm font-medium text-foreground flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-[#5A7A3A]" />
+                    <span>Activo</span>
+                  </span>
+                  <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
+                    Rol Principal Bloqueado
+                  </span>
+                </div>
+                <p className="text-xs text-[#C1502D] dark:text-[#E8B23D] flex items-center gap-1.5 font-medium">
+                  <ShieldAlert className="size-3.5 shrink-0" />
+                  El rol Administrador es el eje principal del sistema y no puede desactivarse.
+                </p>
+              </div>
+            ) : (
+              <Combobox
+                id="rol_estado"
+                name="estado"
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                options={[
+                  { value: 'Activo', label: 'Activo (Habilitado para asignar usuarios)' },
+                  { value: 'Inactivo', label: 'Inactivo (Deshabilitado temporalmente)' },
+                ]}
+              />
+            )}
           </div>
         </div>
       ),
