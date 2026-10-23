@@ -6,7 +6,9 @@ const ClienteCartContext = createContext(null);
 
 // Un carrito por usuario: con una clave única, otro cliente que inicie sesión
 // en el mismo navegador heredaría el carrito anterior.
-const storageKeyDelUsuario = () => `cenarepas_cliente_cart_${leerUsuario().id_usuario || 'anonimo'}`;
+// Se exporta porque la usa la transferencia del catálogo público
+// (features/catalogo/utils/transferirCarrito.js) para pasar el carrito al iniciar sesión.
+export const storageKeyDelUsuario = () => `cenarepas_cliente_cart_${leerUsuario().id_usuario || 'anonimo'}`;
 
 export function ClienteCartProvider({ children }) {
   const [STORAGE_KEY] = useState(storageKeyDelUsuario);

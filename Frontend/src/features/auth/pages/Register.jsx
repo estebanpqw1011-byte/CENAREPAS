@@ -6,6 +6,8 @@ import {
   AlertCircle, Sun, Moon, Building2, Phone, FileText, MapPin, Home
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useLocation } from 'react-router-dom';
+import { pasarCarritoPublico, destinoTrasAcceso } from '../../catalogo/utils/transferirCarrito';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { getDefaultRouteForRole } from '../../../shared/config/permisos';
 import { toast } from '../../../shared/utils/toast.jsx';
@@ -30,6 +32,8 @@ export default function Register() {
   const [fieldErrors, setFieldErrors] = useState({});
 
   const { isLoading, error, setError, handleRegister, navigate } = useAuth();
+  // state.desde = 'confirmar-pedido' cuando viene del carrito del catálogo público.
+  const origen = useLocation().state?.desde;
   const { theme, toggleTheme } = useTheme();
 
   // Cálculo visual de fortaleza de contraseña
@@ -106,7 +110,8 @@ export default function Register() {
 
     const res = await handleRegister(datosRegistro);
     if (res?.success) {
-      navigate(getDefaultRouteForRole(res.usuario.rol));
+      pasarCarritoPublico(res.usuario);
+      navigate(destinoTrasAcceso(res.usuario, origen, getDefaultRouteForRole(res.usuario.rol)));
     } else if (res?.errors) {
       setFieldErrors(res.errors);
     }
@@ -587,7 +592,7 @@ export default function Register() {
             ¿Ya tienes una cuenta registrada?{' '}
             <button
               type="button"
-              onClick={() => navigate('/admin/login')}
+              onClick={() => navigate('/admin/login', { state: { desde: origen } })}
               className="text-[#C1502D] dark:text-[#E8B23D] font-bold hover:underline bg-transparent border-0 cursor-pointer"
             >
               Inicia sesión aquí

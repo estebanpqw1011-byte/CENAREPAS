@@ -9,6 +9,8 @@ import {
   Wheat, Truck, Thermometer
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useLocation } from 'react-router-dom';
+import { pasarCarritoPublico, destinoTrasAcceso } from '../../catalogo/utils/transferirCarrito';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
 import { usePermissions } from '../../../shared/contexts/PermissionContext';
 import { getDefaultRouteForRole } from '../../../shared/config/permisos';
@@ -45,6 +47,8 @@ export default function Login({ onLogin }) {
   const [rememberMe, setRememberMe] = useState(false);
 
   const { isLoading, error, setError, handleLogin, navigate } = useAuth();
+  // state.desde = 'confirmar-pedido' cuando viene del carrito del catálogo público.
+  const origen = useLocation().state?.desde;
   const { theme, toggleTheme } = useTheme();
   const { setActiveRole } = usePermissions();
 
@@ -57,7 +61,8 @@ export default function Login({ onLogin }) {
         setActiveRole(userObj.id_rol);
       }
       if (onLogin) onLogin();
-      navigate(getDefaultRouteForRole(userObj.rol));
+      pasarCarritoPublico(userObj);
+      navigate(destinoTrasAcceso(userObj, origen, getDefaultRouteForRole(userObj.rol)));
     }
   };
 
@@ -383,7 +388,7 @@ export default function Login({ onLogin }) {
               ¿Aún no tienes una cuenta?{' '}
               <button
                 type="button"
-                onClick={() => navigate('/register')}
+                onClick={() => navigate('/register', { state: { desde: origen } })}
                 className="text-[#C1502D] dark:text-[#E8B23D] font-bold hover:text-[#8A3418] dark:hover:text-[#F0C05E] hover:underline bg-transparent border-0 cursor-pointer p-0 ml-1 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Regístrate aquí

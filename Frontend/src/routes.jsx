@@ -22,6 +22,12 @@ import VentasPage from './features/ventas/pages/VentasPage';
 import ConfiguracionPage from './features/configuracion/pages/ConfiguracionPage';
 import NotFoundPage from './features/error/pages/NotFoundPage';
 
+// Catálogo público (sin sesión)
+import CatalogoLayout from './features/catalogo/layout/CatalogoLayout';
+import CatalogoCategoriasPage from './features/catalogo/pages/CatalogoCategoriasPage';
+import CatalogoProductosPage from './features/catalogo/pages/CatalogoProductosPage';
+import CatalogoCarritoPage from './features/catalogo/pages/CatalogoCarritoPage';
+
 // Portal del Cliente
 import ClienteLayout from './features/cliente/layout/ClienteLayout';
 import { ClienteCartProvider } from './features/cliente/context/ClienteCartContext';
@@ -109,10 +115,20 @@ function ClienteRouteGuard({ onLogout }) {
   );
 }
 
-// Redireccionador según rol para accesos directos
-function ShortcutRedirect({ staffTarget, clienteTarget = '/cliente' }) {
+// Catálogo público: solo sin sesión. Con sesión, cada quien va a su inicio.
+function CatalogoPublicoGuard() {
   const { isAuthenticated, isCliente, rolName } = getSessionInfo();
-  if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
+  if (isAuthenticated) {
+    return <Navigate to={isCliente ? '/cliente' : getDefaultRouteForRole(rolName)} replace />;
+  }
+  return <CatalogoLayout />;
+}
+
+// Redireccionador según rol para accesos directos. Sin sesión va a
+// publicTarget (catálogo o carrito públicos) o, si no tiene, al login.
+function ShortcutRedirect({ staffTarget, clienteTarget = '/cliente', publicTarget = '/admin/login' }) {
+  const { isAuthenticated, isCliente, rolName } = getSessionInfo();
+  if (!isAuthenticated) return <Navigate to={publicTarget} replace />;
   if (isCliente) return <Navigate to={clienteTarget} replace />;
   return <Navigate to={staffTarget || getDefaultRouteForRole(rolName)} replace />;
 }
@@ -129,8 +145,15 @@ export function AppRoutes({ isAuthenticated, setIsAuthenticated }) {
 
   return (
     <Routes>
+      {/* ─── Catálogo público (primera pantalla, solo sin sesión) ─── */}
+      <Route element={<CatalogoPublicoGuard />}>
+        <Route path="/" element={<CatalogoCategoriasPage />} />
+        <Route path="/catalogo/categoria/:id" element={<CatalogoProductosPage />} />
+        <Route path="/catalogo/carrito" element={<CatalogoCarritoPage />} />
+      </Route>
+
       {/* ─── Rutas Públicas ─── */}
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/inicio" element={<LandingPage />} />
       <Route path="/login" element={<Navigate to="/admin/login" replace />} />
       <Route
         path="/admin/login"
@@ -151,8 +174,8 @@ export function AppRoutes({ isAuthenticated, setIsAuthenticated }) {
       <Route path="/compras" element={<ShortcutRedirect staffTarget="/admin/compras" />} />
       <Route path="/productos" element={<ShortcutRedirect staffTarget="/admin/productos" clienteTarget="/cliente/catalogo" />} />
       <Route path="/categorias" element={<ShortcutRedirect staffTarget="/admin/categorias" clienteTarget="/cliente/catalogo" />} />
-      <Route path="/catalogo" element={<ShortcutRedirect staffTarget="/admin/productos" clienteTarget="/cliente/catalogo" />} />
-      <Route path="/carrito" element={<ShortcutRedirect staffTarget="/admin/pedidos" clienteTarget="/cliente/carrito" />} />
+      <Route path="/catalogo" element={<ShortcutRedirect staffTarget="/admin/productos" clienteTarget="/cliente/catalogo" publicTarget="/" />} />
+      <Route path="/carrito" element={<ShortcutRedirect staffTarget="/admin/pedidos" clienteTarget="/cliente/carrito" publicTarget="/catalogo/carrito" />} />
 
       {/* ─── Portal del Cliente (Solo rol Cliente) ─── */}
       <Route
