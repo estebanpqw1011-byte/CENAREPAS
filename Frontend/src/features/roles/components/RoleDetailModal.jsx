@@ -83,15 +83,6 @@ export default function RoleDetailModal({ isOpen, onClose, role }) {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold tracking-tight">{role.nombre}</h2>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    isActive
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                      : 'bg-muted text-muted-foreground border border-border'
-                  }`}
-                >
-                  {isActive ? 'Activo' : 'Inactivo'}
-                </span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Información general y permisos asignados en el sistema
@@ -235,6 +226,20 @@ export default function RoleDetailModal({ isOpen, onClose, role }) {
                 );
               })}
             </div>
+          </div>
+
+          {/* Estado (siempre de último) */}
+          <div className="p-3 rounded-lg bg-muted/40 border border-border/60 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Estado</span>
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                isActive
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-muted text-muted-foreground border border-border'
+              }`}
+            >
+              {isActive ? 'Activo' : 'Inactivo'}
+            </span>
           </div>
         </div>
 

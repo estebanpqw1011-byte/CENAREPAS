@@ -100,6 +100,11 @@ export default function RolesPage() {
         ),
       },
       {
+        key: 'fecha_creacion',
+        label: 'Fecha de Creación',
+        render: (value) => <span className="text-muted-foreground">{value}</span>,
+      },
+      {
         key: 'estado',
         label: 'Estado',
         render: (value, rol) => {
@@ -122,11 +127,6 @@ export default function RolesPage() {
             </div>
           );
         },
-      },
-      {
-        key: 'fecha_creacion',
-        label: 'Fecha de Creación',
-        render: (value) => <span className="text-muted-foreground">{value}</span>,
       },
       {
         key: 'acciones',
@@ -167,8 +167,8 @@ export default function RolesPage() {
         { header: 'ID', key: 'id_rol' },
         { header: 'Nombre del Rol', key: 'nombre' },
         { header: 'Descripción', key: 'descripcion' },
-        { header: 'Estado', key: 'estado' },
         { header: 'Fecha Creación', key: 'fecha_creacion' },
+        { header: 'Estado', key: 'estado' },
       ],
       title: 'Reporte de Roles y Permisos',
       subtitle: 'Listado de roles configurados en el sistema CENAREPAS',
@@ -182,8 +182,8 @@ export default function RolesPage() {
         { header: 'ID', key: 'id_rol', align: 'center' },
         { header: 'Nombre del Rol', key: 'nombre' },
         { header: 'Descripción', key: 'descripcion' },
-        { header: 'Estado', key: 'estado', align: 'center' },
         { header: 'Fecha de Creación', key: 'fecha_creacion', align: 'center' },
+        { header: 'Estado', key: 'estado', align: 'center' },
       ],
       title: 'Reporte de Roles y Permisos',
       subtitle: 'Listado de roles configurados en el sistema CENAREPAS',

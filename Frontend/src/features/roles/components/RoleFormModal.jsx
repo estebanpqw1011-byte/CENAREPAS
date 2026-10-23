@@ -158,6 +158,27 @@ export function RoleFormModal({ open, onClose, role = null, onSave, isLoading = 
             />
           </div>
 
+          {/* Descripción */}
+          <div className="sm:col-span-2">
+            <label htmlFor="rol_descripcion" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Descripción del rol <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
+            </label>
+            <textarea
+              id="rol_descripcion"
+              name="descripcion"
+              maxLength={255}
+              rows={3}
+              placeholder="Describe las responsabilidades y contexto asignado a este rol..."
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              className="w-full p-3 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all resize-none min-h-[75px]"
+            />
+            <div className="flex justify-between items-center mt-1 text-[11px] text-muted-foreground">
+              <span>Define el alcance de este perfil para los demás administradores.</span>
+              <span>{descripcion.length}/255</span>
+            </div>
+          </div>
+
           {/* Estado del Rol */}
           <div className="sm:col-span-2">
             <label htmlFor="rol_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
@@ -191,27 +212,6 @@ export function RoleFormModal({ open, onClose, role = null, onSave, isLoading = 
                 ]}
               />
             )}
-          </div>
-
-          {/* Descripción */}
-          <div className="sm:col-span-2">
-            <label htmlFor="rol_descripcion" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Descripción del rol <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
-            </label>
-            <textarea
-              id="rol_descripcion"
-              name="descripcion"
-              maxLength={255}
-              rows={3}
-              placeholder="Describe las responsabilidades y contexto asignado a este rol..."
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              className="w-full p-3 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all resize-none min-h-[75px]"
-            />
-            <div className="flex justify-between items-center mt-1 text-[11px] text-muted-foreground">
-              <span>Define el alcance de este perfil para los demás administradores.</span>
-              <span>{descripcion.length}/255</span>
-            </div>
           </div>
 
           {/* Ayuda contextual */}

@@ -250,7 +250,7 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
       content: (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
           {/* Rol */}
-          <div className="sm:col-span-1">
+          <div className="sm:col-span-2">
             <label htmlFor="usuario_id_rol" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
               Rol del sistema <span className="text-destructive font-bold ml-0.5">*</span>
             </label>
@@ -263,23 +263,6 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
                 value: String(r.id_rol),
                 label: r.nombre,
               }))}
-            />
-          </div>
-
-          {/* Estado */}
-          <div className="sm:col-span-1">
-            <label htmlFor="usuario_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
-              Estado de la cuenta <span className="text-destructive font-bold ml-0.5">*</span>
-            </label>
-            <Combobox
-              id="usuario_estado"
-              name="estado"
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
-              options={[
-                { value: 'Activo', label: 'Activo' },
-                { value: 'Inactivo', label: 'Inactivo' },
-              ]}
             />
           </div>
 
@@ -304,6 +287,23 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
             <p className="text-[11px] text-muted-foreground mt-1">
               {usuario ? 'Ingresa una nueva contraseña únicamente si deseas restablecerla.' : `Utiliza una combinación segura de al menos ${CONTRASENA_MIN} caracteres.`}
             </p>
+          </div>
+
+          {/* Estado */}
+          <div className="sm:col-span-1">
+            <label htmlFor="usuario_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Estado de la cuenta <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
+            <Combobox
+              id="usuario_estado"
+              name="estado"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              options={[
+                { value: 'Activo', label: 'Activo' },
+                { value: 'Inactivo', label: 'Inactivo' },
+              ]}
+            />
           </div>
 
           {/* Ayuda contextual de seguridad */}

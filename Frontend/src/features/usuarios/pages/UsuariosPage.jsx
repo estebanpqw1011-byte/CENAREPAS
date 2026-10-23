@@ -91,6 +91,11 @@ export default function UsuariosPage() {
         ),
       },
       {
+        key: 'fecha_creacion',
+        label: 'Fecha de Creación',
+        render: (value) => <span className="text-muted-foreground">{value}</span>,
+      },
+      {
         key: 'estado',
         label: 'Estado',
         render: (value, usuario) => (
@@ -100,11 +105,6 @@ export default function UsuariosPage() {
             onToggle={() => handleRequestStatusChange(usuario)}
           />
         ),
-      },
-      {
-        key: 'fecha_creacion',
-        label: 'Fecha de Creación',
-        render: (value) => <span className="text-muted-foreground">{value}</span>,
       },
       {
         key: 'acciones',
@@ -152,8 +152,8 @@ export default function UsuariosPage() {
         { header: 'Nombre', key: 'nombre' },
         { header: 'Correo Electrónico', key: 'correo' },
         { header: 'Rol', accessor: (u) => roleNames[u.id_rol] || 'Sin rol' },
-        { header: 'Estado', key: 'estado' },
         { header: 'Fecha de Creación', key: 'fecha_creacion' },
+        { header: 'Estado', key: 'estado' },
       ],
       title: 'Reporte de Usuarios',
       subtitle: 'Listado de usuarios registrados en el sistema CENAREPAS',
@@ -168,8 +168,8 @@ export default function UsuariosPage() {
         { header: 'Nombre Completo', key: 'nombre' },
         { header: 'Correo Electrónico', key: 'correo' },
         { header: 'Rol Asignado', accessor: (u) => roleNames[u.id_rol] || 'Sin rol' },
-        { header: 'Estado', key: 'estado', align: 'center' },
         { header: 'Fecha de Creación', key: 'fecha_creacion', align: 'center' },
+        { header: 'Estado', key: 'estado', align: 'center' },
       ],
       title: 'Reporte de Usuarios',
       subtitle: 'Listado de usuarios registrados en el sistema CENAREPAS',
