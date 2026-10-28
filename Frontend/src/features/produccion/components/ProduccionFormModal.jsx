@@ -46,7 +46,7 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
         setIdFicha(lote.id_ficha ? String(lote.id_ficha) : '1');
         setCantidadProducida(lote.cantidad_producida != null ? String(lote.cantidad_producida) : '');
         setIdUsuarioResponsable(lote.id_usuario_responsable ? String(lote.id_usuario_responsable) : '1');
-        setFechaProduccion(lote.fecha_produccion || '');
+        setFechaProduccion(lote.fecha_produccion ? String(lote.fecha_produccion).slice(0, 10) : '');
         setEstado(lote.estado || 'En proceso');
         setObservaciones(lote.observaciones || '');
         if (Array.isArray(lote.insumos_consumidos)) {
