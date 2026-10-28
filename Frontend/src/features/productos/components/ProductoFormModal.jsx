@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Upload, Trash2, Image as ImageIcon, DollarSign, Box } from 'lucide-react';
+import { DollarSign, Box } from 'lucide-react';
 import { Combobox } from '../../../shared/ui/Combobox';
-import { subirArchivo, validarArchivo, FORMATOS_ARCHIVO } from '../../../shared/services/uploadService';
-import { getImageUrl } from '../../../shared/services/api';
+import { ImageUploader } from '../../../shared/components/ImageUploader';
 import { StepperModal } from '../../../shared/components/StepperModal';
 import { getOpcionesComo, conValorActual } from '../../../shared/services/opciones';
 
@@ -15,11 +14,9 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
   const [idFicha, setIdFicha] = useState('');
   const [idProveedor, setIdProveedor] = useState('');
   const [imagenUrl, setImagenUrl] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
+  // public_id de la imagen subida con ImageUploader en esta edición (null si es URL externa o la anterior).
+  const [imagenPublicId, setImagenPublicId] = useState(null);
   const [urlInput, setUrlInput] = useState('');
-  const [errorImagen, setErrorImagen] = useState('');
   const [stockMinimo, setStockMinimo] = useState('');
   const [fechaVencimiento, setFechaVencimiento] = useState('');
   const [estado, setEstado] = useState('Activo');
@@ -50,10 +47,7 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
   useEffect(() => {
     if (open) {
       setCurrentStep(0);
-      setSelectedFile(null);
-      setPreviewUrl('');
-      setIsUploading(false);
-      setErrorImagen('');
+      setImagenPublicId(null);
 
       if (producto) {
         setNombre(producto.nombre || '');
@@ -93,44 +87,19 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
     }
   }, [producto, open, categorias]);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    const error = validarArchivo(file, 'producto');
-    if (error) {
-      setErrorImagen(error);
-      return;
-    }
-    setErrorImagen('');
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-  };
-
-  const quitarImagenSeleccionada = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setImagenUrl('');
-    setSelectedFile(null);
-    setPreviewUrl('');
-    setUrlInput('');
-    setErrorImagen('');
-  };
-
   const isDirty = useMemo(() => {
     if (!open) return false;
     if (!producto) {
-      return nombre.trim() !== '' || precioVenta !== '' || selectedFile != null || imagenUrl !== '';
+      return nombre.trim() !== '' || precioVenta !== '' || imagenUrl !== '';
     }
     return (
       nombre !== (producto.nombre || '') ||
       idCategoria !== String(producto.id_categoria || '1') ||
       precioVenta !== String(producto.precio_venta ?? '') ||
       stockActual !== String(producto.stock_actual ?? '0') ||
-      selectedFile != null ||
       imagenUrl !== (producto.imagen_url || '')
     );
-  }, [open, producto, nombre, idCategoria, precioVenta, stockActual, selectedFile, imagenUrl]);
+  }, [open, producto, nombre, idCategoria, precioVenta, stockActual, imagenUrl]);
 
   const validateStep1 = useCallback(() => {
     if (!nombre.trim()) {
@@ -168,24 +137,11 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
       return;
     }
 
-    // Imagen: archivo nuevo (se sube a Cloudinary o al disco del servidor),
+    // Imagen: la subida con ImageUploader (ya está en Cloudinary, con su public_id),
     // URL externa, la que ya tenía o ninguna (quitar_imagen borra la anterior).
     // imagen_public_id va siempre: así no se cuela el del producto (...producto).
-    const imagen = { imagen_url: (imagenUrl || urlInput).trim() || null, imagen_public_id: null };
-    if (selectedFile) {
-      try {
-        setIsUploading(true);
-        const subido = await subirArchivo(selectedFile, 'producto');
-        imagen.imagen_url = subido.url;
-        imagen.imagen_public_id = subido.public_id;
-      } catch (uploadErr) {
-        setErrorImagen(`No se pudo subir la imagen: ${uploadErr.message || 'error desconocido'}`);
-        setCurrentStep(1);
-        return;
-      } finally {
-        setIsUploading(false);
-      }
-    } else if (producto?.imagen_url && !imagen.imagen_url) {
+    const imagen = { imagen_url: (imagenUrl || urlInput).trim() || null, imagen_public_id: imagenPublicId };
+    if (producto?.imagen_url && !imagen.imagen_url) {
       imagen.quitar_imagen = true;
     }
 
@@ -223,7 +179,7 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
     } else {
       onClose();
     }
-  }, [validateStep1, validateStep2, producto, nombre, idCategoria, precioVenta, stockActual, descripcion, idFicha, idProveedor, imagenUrl, urlInput, selectedFile, stockMinimo, fechaVencimiento, estado, onSave, onClose]);
+  }, [validateStep1, validateStep2, producto, nombre, idCategoria, precioVenta, stockActual, descripcion, idFicha, idProveedor, imagenUrl, urlInput, imagenPublicId, stockMinimo, fechaVencimiento, estado, onSave, onClose]);
 
   const steps = useMemo(() => [
     {
@@ -380,49 +336,20 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
 
           {/* Fotografía del Producto */}
           <div className="sm:col-span-2 p-4 rounded-xl border border-border bg-muted/20 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-2">
-                <ImageIcon className="size-4 text-primary" />
-                <span>Fotografía comercial</span>
-              </span>
-              {(previewUrl || imagenUrl) && (
-                <button
-                  type="button"
-                  onClick={quitarImagenSeleccionada}
-                  className="text-xs text-destructive hover:underline flex items-center gap-1 cursor-pointer font-semibold"
-                >
-                  <Trash2 className="size-3.5" />
-                  Eliminar
-                </button>
-              )}
-            </div>
+            <ImageUploader
+              carpeta="productos"
+              value={imagenUrl || null}
+              onChange={(nueva) => {
+                setImagenUrl(nueva?.url || '');
+                setImagenPublicId(nueva?.public_id || null);
+                setUrlInput('');
+              }}
+              label="Fotografía comercial"
+              disabled={isLoading}
+            />
 
-            {previewUrl || imagenUrl ? (
-              <div className="relative w-full h-36 rounded-xl border border-border bg-card overflow-hidden group shadow-2xs flex items-center justify-center">
-                <img
-                  src={previewUrl || getImageUrl(imagenUrl)}
-                  alt="Vista previa del producto"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            ) : (
+            {!imagenUrl && (
               <div className="space-y-2">
-                <label
-                  htmlFor="producto_imagen_archivo"
-                  className="flex flex-col items-center justify-center gap-1.5 w-full h-28 rounded-xl border-2 border-dashed border-border bg-card hover:border-primary/60 hover:bg-primary/5 transition-colors cursor-pointer text-center px-3"
-                >
-                  <Upload className="size-5 text-primary" />
-                  <span className="text-xs font-semibold text-foreground">Subir imagen desde el equipo</span>
-                  <span className="text-xs text-muted-foreground">{FORMATOS_ARCHIVO.producto.texto} · máximo 5 MB</span>
-                  <input
-                    id="producto_imagen_archivo"
-                    name="imagen_archivo"
-                    type="file"
-                    accept={FORMATOS_ARCHIVO.producto.accept}
-                    onChange={handleFileChange}
-                    className="sr-only"
-                  />
-                </label>
                 <p className="text-xs text-muted-foreground text-center">o pega la dirección de una imagen</p>
                 <div className="flex gap-2">
                   <input
@@ -440,8 +367,7 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
                     onClick={() => {
                       if (urlInput.trim()) {
                         setImagenUrl(urlInput.trim());
-                        setSelectedFile(null);
-                        setPreviewUrl('');
+                        setImagenPublicId(null);
                       }
                     }}
                     className="px-4 h-10 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-xl text-xs font-bold transition-colors cursor-pointer"
@@ -450,14 +376,6 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
                   </button>
                 </div>
               </div>
-            )}
-            {selectedFile && (
-              <p className="text-xs text-muted-foreground">
-                {selectedFile.name} · se sube al guardar el producto
-              </p>
-            )}
-            {errorImagen && (
-              <p role="alert" className="text-xs font-semibold text-destructive">{errorImagen}</p>
             )}
           </div>
 
@@ -489,7 +407,7 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
         </div>
       ),
     },
-  ], [nombre, idCategoria, categorias, precioVenta, estado, descripcion, stockActual, stockMinimo, fechaVencimiento, idFicha, fichas, idProveedor, proveedores, previewUrl, imagenUrl, urlInput, selectedFile, errorImagen, validateStep1, validateStep2]);
+  ], [nombre, idCategoria, categorias, precioVenta, estado, descripcion, stockActual, stockMinimo, fechaVencimiento, idFicha, fichas, idProveedor, proveedores, imagenUrl, urlInput, isLoading, validateStep1, validateStep2]);
 
   return (
     <StepperModal
@@ -502,7 +420,7 @@ export function ProductoFormModal({ open, onClose, producto = null, onSave, isLo
       currentStep={currentStep}
       onStepChange={setCurrentStep}
       onSubmit={handleSubmit}
-      isLoading={isLoading || isUploading}
+      isLoading={isLoading}
       submitLabel={producto ? 'Guardar Cambios' : 'Crear Producto'}
       isDirty={isDirty}
     />
