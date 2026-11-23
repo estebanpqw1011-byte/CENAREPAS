@@ -1,0 +1,352 @@
+[
+  {
+    "id": "Alto del aire",
+    "nombre": "Alto del aire",
+    "comuna": null
+  },
+  {
+    "id": "Alto El Espino",
+    "nombre": "Alto El Espino",
+    "comuna": null
+  },
+  {
+    "id": "Arrayan",
+    "nombre": "Arrayan",
+    "comuna": null
+  },
+  {
+    "id": "Boquemonte",
+    "nombre": "Boquemonte",
+    "comuna": null
+  },
+  {
+    "id": "Buenos Aires",
+    "nombre": "Buenos Aires",
+    "comuna": null
+  },
+  {
+    "id": "Campo Alegre",
+    "nombre": "Campo Alegre",
+    "comuna": null
+  },
+  {
+    "id": "Cantarranas",
+    "nombre": "Cantarranas",
+    "comuna": null
+  },
+  {
+    "id": "Cardalito",
+    "nombre": "Cardalito",
+    "comuna": null
+  },
+  {
+    "id": "Caselata",
+    "nombre": "Caselata",
+    "comuna": null
+  },
+  {
+    "id": "Caseteja",
+    "nombre": "Caseteja",
+    "comuna": null
+  },
+  {
+    "id": "Convenio",
+    "nombre": "Convenio",
+    "comuna": null
+  },
+  {
+    "id": "El 60",
+    "nombre": "El 60",
+    "comuna": null
+  },
+  {
+    "id": "El Boquerón",
+    "nombre": "El Boquerón",
+    "comuna": null
+  },
+  {
+    "id": "El Cano",
+    "nombre": "El Cano",
+    "comuna": null
+  },
+  {
+    "id": "El Cerezo",
+    "nombre": "El Cerezo",
+    "comuna": null
+  },
+  {
+    "id": "El Chuscal",
+    "nombre": "El Chuscal",
+    "comuna": null
+  },
+  {
+    "id": "El Diamante",
+    "nombre": "El Diamante",
+    "comuna": null
+  },
+  {
+    "id": "El Espinal",
+    "nombre": "El Espinal",
+    "comuna": null
+  },
+  {
+    "id": "El Godo",
+    "nombre": "El Godo",
+    "comuna": null
+  },
+  {
+    "id": "El Horno",
+    "nombre": "El Horno",
+    "comuna": null
+  },
+  {
+    "id": "El Monumento",
+    "nombre": "El Monumento",
+    "comuna": null
+  },
+  {
+    "id": "El Pajarito",
+    "nombre": "El Pajarito",
+    "comuna": null
+  },
+  {
+    "id": "El Palmar",
+    "nombre": "El Palmar",
+    "comuna": null
+  },
+  {
+    "id": "El Paraiso",
+    "nombre": "El Paraiso",
+    "comuna": null
+  },
+  {
+    "id": "El Paramo",
+    "nombre": "El Paramo",
+    "comuna": null
+  },
+  {
+    "id": "El Pedrero",
+    "nombre": "El Pedrero",
+    "comuna": null
+  },
+  {
+    "id": "El Pino",
+    "nombre": "El Pino",
+    "comuna": null
+  },
+  {
+    "id": "El Porvenir",
+    "nombre": "El Porvenir",
+    "comuna": null
+  },
+  {
+    "id": "El Raizal",
+    "nombre": "El Raizal",
+    "comuna": null
+  },
+  {
+    "id": "El Roble",
+    "nombre": "El Roble",
+    "comuna": null
+  },
+  {
+    "id": "El Tablon",
+    "nombre": "El Tablon",
+    "comuna": null
+  },
+  {
+    "id": "El Volcan",
+    "nombre": "El Volcan",
+    "comuna": null
+  },
+  {
+    "id": "Guacamayal",
+    "nombre": "Guacamayal",
+    "comuna": null
+  },
+  {
+    "id": "Hacienda La Margarita",
+    "nombre": "Hacienda La Margarita",
+    "comuna": null
+  },
+  {
+    "id": "La Aguacatala",
+    "nombre": "La Aguacatala",
+    "comuna": null
+  },
+  {
+    "id": "La Chuscala",
+    "nombre": "La Chuscala",
+    "comuna": null
+  },
+  {
+    "id": "La Clara",
+    "nombre": "La Clara",
+    "comuna": null
+  },
+  {
+    "id": "La Corrala",
+    "nombre": "La Corrala",
+    "comuna": null
+  },
+  {
+    "id": "La Escondida",
+    "nombre": "La Escondida",
+    "comuna": null
+  },
+  {
+    "id": "La Esperanza",
+    "nombre": "La Esperanza",
+    "comuna": null
+  },
+  {
+    "id": "La Florida",
+    "nombre": "La Florida",
+    "comuna": null
+  },
+  {
+    "id": "La Maria",
+    "nombre": "La Maria",
+    "comuna": null
+  },
+  {
+    "id": "La Miel",
+    "nombre": "La Miel",
+    "comuna": null
+  },
+  {
+    "id": "La Pomera",
+    "nombre": "La Pomera",
+    "comuna": null
+  },
+  {
+    "id": "La Primavera",
+    "nombre": "La Primavera",
+    "comuna": null
+  },
+  {
+    "id": "La Quiebra",
+    "nombre": "La Quiebra",
+    "comuna": null
+  },
+  {
+    "id": "La Raya",
+    "nombre": "La Raya",
+    "comuna": null
+  },
+  {
+    "id": "La Salada Parte Alta",
+    "nombre": "La Salada Parte Alta",
+    "comuna": null
+  },
+  {
+    "id": "La Salada Parte Baja",
+    "nombre": "La Salada Parte Baja",
+    "comuna": null
+  },
+  {
+    "id": "La Tobara",
+    "nombre": "La Tobara",
+    "comuna": null
+  },
+  {
+    "id": "La Tolva",
+    "nombre": "La Tolva",
+    "comuna": null
+  },
+  {
+    "id": "La Valeria",
+    "nombre": "La Valeria",
+    "comuna": null
+  },
+  {
+    "id": "Las Alberras",
+    "nombre": "Las Alberras",
+    "comuna": null
+  },
+  {
+    "id": "Las Lagunas",
+    "nombre": "Las Lagunas",
+    "comuna": null
+  },
+  {
+    "id": "Las Puertas",
+    "nombre": "Las Puertas",
+    "comuna": null
+  },
+  {
+    "id": "Los Cerezos",
+    "nombre": "Los Cerezos",
+    "comuna": null
+  },
+  {
+    "id": "Malpaso",
+    "nombre": "Malpaso",
+    "comuna": null
+  },
+  {
+    "id": "Maní del Cardal",
+    "nombre": "Maní del Cardal",
+    "comuna": null
+  },
+  {
+    "id": "Media Luna",
+    "nombre": "Media Luna",
+    "comuna": null
+  },
+  {
+    "id": "Nariño",
+    "nombre": "Nariño",
+    "comuna": null
+  },
+  {
+    "id": "Palomina",
+    "nombre": "Palomina",
+    "comuna": null
+  },
+  {
+    "id": "Potrerillo",
+    "nombre": "Potrerillo",
+    "comuna": null
+  },
+  {
+    "id": "Primavera",
+    "nombre": "Primavera",
+    "comuna": null
+  },
+  {
+    "id": "Puerto Baldes",
+    "nombre": "Puerto Baldes",
+    "comuna": null
+  },
+  {
+    "id": "Salinas",
+    "nombre": "Salinas",
+    "comuna": null
+  },
+  {
+    "id": "San Isidro",
+    "nombre": "San Isidro",
+    "comuna": null
+  },
+  {
+    "id": "Santo Meno",
+    "nombre": "Santo Meno",
+    "comuna": null
+  },
+  {
+    "id": "Sinifaná",
+    "nombre": "Sinifaná",
+    "comuna": null
+  },
+  {
+    "id": "Tolima",
+    "nombre": "Tolima",
+    "comuna": null
+  },
+  {
+    "id": "Vueltas Mercadito",
+    "nombre": "Vueltas Mercadito",
+    "comuna": null
+  }
+]
