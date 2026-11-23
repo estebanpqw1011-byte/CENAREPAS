@@ -27,13 +27,15 @@ export class FichasTecnicasController {
   static async update(req, res, next) {
     try {
       const data = await FichasTecnicasService.update(req.params.id, req.body);
+      if (!data) return errorResponse(res, 'Ficha técnica no encontrada', 404);
       return successResponse(res, data, 'Ficha técnica actualizada exitosamente');
     } catch (e) { next(e); }
   }
 
   static async delete(req, res, next) {
     try {
-      await FichasTecnicasService.delete(req.params.id);
+      const deleted = await FichasTecnicasService.delete(req.params.id);
+      if (!deleted) return errorResponse(res, 'Ficha técnica no encontrada', 404);
       return successResponse(res, null, 'Ficha técnica eliminada exitosamente');
     } catch (e) { next(e); }
   }

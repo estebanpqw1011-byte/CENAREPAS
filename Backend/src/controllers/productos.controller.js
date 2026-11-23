@@ -27,13 +27,15 @@ export class ProductosController {
   static async update(req, res, next) {
     try {
       const data = await ProductosService.update(req.params.id, req.body);
+      if (!data) return errorResponse(res, 'Producto no encontrado', 404);
       return successResponse(res, data, 'Producto actualizado exitosamente');
     } catch (e) { next(e); }
   }
 
   static async delete(req, res, next) {
     try {
-      await ProductosService.delete(req.params.id);
+      const deleted = await ProductosService.delete(req.params.id);
+      if (!deleted) return errorResponse(res, 'Producto no encontrado', 404);
       return successResponse(res, null, 'Producto eliminado exitosamente');
     } catch (e) { next(e); }
   }

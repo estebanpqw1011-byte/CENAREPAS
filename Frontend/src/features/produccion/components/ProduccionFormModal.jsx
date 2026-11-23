@@ -195,8 +195,8 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
                 id="lote_cantidad_producida"
                 name="cantidad_producida"
                 type="number"
-                min="0.01"
-                step="0.01"
+                min="1"
+                step="1"
                 required
                 placeholder="Ej. 500"
                 value={cantidadProducida}
@@ -344,7 +344,6 @@ export function ProduccionFormModal({ open, onClose, lote = null, onSave, isLoad
                 { value: 'en_proceso', label: 'En proceso' },
                 { value: 'finalizado', label: 'Finalizado' },
                 { value: 'programado', label: 'Programado' },
-                { value: 'anulado', label: 'Anulado' },
               ]}
             />
           </div>

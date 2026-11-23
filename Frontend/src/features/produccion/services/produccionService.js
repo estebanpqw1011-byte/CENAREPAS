@@ -14,5 +14,5 @@ export const updateLote = async (id_lote, lote) => {
 };
 
 export const anularLote = async (id_lote) => {
-  return api.delete(`/produccion/${id_lote}`);
+  return api.patch(`/produccion/${id_lote}/anular`);
 };

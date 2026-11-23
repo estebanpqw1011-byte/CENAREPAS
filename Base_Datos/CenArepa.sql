@@ -157,11 +157,15 @@ CREATE TABLE IF NOT EXISTS lote_produccion (
     cantidad_producida        NUMERIC(12,2) NOT NULL,
     estado                    VARCHAR(15)  NOT NULL DEFAULT 'en_proceso',
     observaciones             VARCHAR(255),
+    inventario_aplicado       BOOLEAN      NOT NULL DEFAULT FALSE,
     CONSTRAINT fk_lote_ficha FOREIGN KEY (id_ficha)
         REFERENCES ficha_tecnica (id_ficha) ON DELETE RESTRICT,
     CONSTRAINT fk_lote_usuario FOREIGN KEY (id_usuario_responsable)
         REFERENCES usuario (id_usuario) ON DELETE RESTRICT
 );
+
+ALTER TABLE lote_produccion
+    ADD COLUMN IF NOT EXISTS inventario_aplicado BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS lote_produccion_insumo (
     id_lote_insumo        SERIAL PRIMARY KEY,

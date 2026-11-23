@@ -159,7 +159,7 @@ export default function ProduccionPage() {
                 setSelectedLote(lote);
                 setShowModal(true);
               }}
-              editDisabled={!can('produccion', 'editar')}
+              editDisabled={!can('produccion', 'editar') || isAnulado}
               onDelete={
                 !isAnulado
                   ? () =>
@@ -285,7 +285,7 @@ export default function ProduccionPage() {
       <ConfirmDialog
         isOpen={deleteDialog.isOpen}
         title="Anular Lote de Producción"
-        message={`¿Estás seguro de que deseas anular el lote "${deleteDialog.nombre}"? Esta acción no se puede deshacer.`}
+        message={`¿Deseas anular el lote "${deleteDialog.nombre}"? Se conservará el registro y, si el inventario fue actualizado al crearlo, se revertirán esos movimientos.`}
         confirmText="Anular"
         onConfirm={handleAnular}
         onCancel={() => setDeleteDialog({ isOpen: false, id: null, nombre: '' })}
