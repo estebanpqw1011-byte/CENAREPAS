@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getClientes, createCliente, updateCliente, deleteCliente } from '../services/clientesService';
+import { getClientes, createCliente, updateCliente, deleteCliente, cambiarEstadoCliente } from '../services/clientesService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useClientes() {
@@ -9,13 +9,27 @@ export function useClientes() {
   const [showModal, setShowModal] = useState(false);
   const [detailModal, setDetailModal] = useState({ isOpen: false, data: null });
   const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, id: null, nombre: '' });
+  const [statusDialog, setStatusDialog] = useState({ isOpen: false, cliente: null, nextEstado: 'Activo' });
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  const fetchClientes = () => {
+    setIsLoading(true);
+    setLoadError(null);
+    return getClientes()
+      .then((data) => setClientes(Array.isArray(data) ? data : []))
+      .catch((error) => {
+        setClientes([]);
+        setLoadError(error?.message || 'No se pudieron cargar los clientes');
+      })
+      .finally(() => setIsLoading(false));
+  };
 
   useEffect(() => {
-    getClientes()
-      .then((data) => setClientes(Array.isArray(data) ? data : []))
-      .catch(() => setClientes([]));
+    fetchClientes();
   }, []);
 
   const filteredClientes = useMemo(() => {
@@ -53,7 +67,7 @@ export function useClientes() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar el cliente');
+      toast.error(error?.data?.message || 'No se pudo guardar el cliente');
     } finally {
       setIsSaving(false);
     }
@@ -74,6 +88,39 @@ export function useClientes() {
     }
   };
 
+  const handleRequestStatusChange = (cliente) => {
+    if (!cliente) return;
+    const isCurrentlyActive = String(cliente.estado || '').toLowerCase() === 'activo';
+    const nextEstado = isCurrentlyActive ? 'Inactivo' : 'Activo';
+    setStatusDialog({
+      isOpen: true,
+      cliente,
+      nextEstado,
+    });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!statusDialog.cliente) return;
+    setIsUpdatingStatus(true);
+    try {
+      const { id_cliente, nombre, direccion } = statusDialog.cliente;
+      const actualizado = await cambiarEstadoCliente(id_cliente, statusDialog.nextEstado);
+
+      setClientes((prev) =>
+        prev.map((c) =>
+          c.id_cliente === id_cliente ? { ...c, estado: actualizado?.estado || statusDialog.nextEstado } : c
+        )
+      );
+
+      toast.success(`Estado del cliente "${nombre}" cambiado a ${statusDialog.nextEstado}`);
+      setStatusDialog({ isOpen: false, cliente: null, nextEstado: 'Activo' });
+    } catch (error) {
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado del cliente');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   return {
     clientes: filteredClientes,
     rawClientes: clientes,
@@ -87,9 +134,17 @@ export function useClientes() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
+    isLoading,
+    loadError,
+    refetch: fetchClientes,
     handleSave,
     handleDelete,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   };
 }

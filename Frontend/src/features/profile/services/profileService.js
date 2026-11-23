@@ -1,12 +1,25 @@
+import { ROLE_DEFAULT_USERS } from '../../../shared/config/permisos';
+
 // profileService.js - Servicio para datos de perfil y seguridad
-export const getProfile = async () => {
+export const getProfile = async (roleId = 1) => {
+  let storedUser = null;
+  try {
+    const raw = localStorage.getItem('user');
+    if (raw) storedUser = JSON.parse(raw);
+  } catch {
+    // ignore
+  }
+
+  const numRoleId = Number(roleId) || Number(storedUser?.id_rol) || 1;
+  const meta = ROLE_DEFAULT_USERS[numRoleId] || ROLE_DEFAULT_USERS[1];
+
   return {
-    nombre: 'Administrador Sistema',
-    email: 'admin@sistema.com',
-    telefono: '+1 234-567-8900',
-    cargo: 'Administrador General',
-    fechaCreacion: '15 Enero 2024',
-    ultimoAcceso: '3 Junio 2026 - 10:30 AM',
+    nombre: storedUser?.nombre || meta.nombre,
+    email: storedUser?.correo || meta.correo,
+    telefono: storedUser?.telefono || meta.telefono,
+    cargo: meta.cargo,
+    fechaCreacion: meta.fechaCreacion,
+    ultimoAcceso: meta.ultimoAcceso,
   };
 };
 

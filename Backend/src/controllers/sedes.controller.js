@@ -33,8 +33,9 @@ export class SedesController {
 
   static async delete(req, res, next) {
     try {
-      await SedesService.delete(req.params.id);
-      return successResponse(res, null, 'Sede eliminada exitosamente');
+      const ok = await SedesService.delete(req.params.id);
+      if (!ok) return errorResponse(res, 'Sede no encontrada', 404);
+      return successResponse(res, null, 'Sede inactivada exitosamente');
     } catch (e) { next(e); }
   }
 }

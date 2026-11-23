@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCategorias, createCategoria, updateCategoria, deleteCategoria } from '../services/categoriasService';
+import { getCategorias, createCategoria, updateCategoria, deleteCategoria, cambiarEstadoCategoria } from '../services/categoriasService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useCategorias() {
@@ -9,13 +9,27 @@ export function useCategorias() {
   const [showModal, setShowModal] = useState(false);
   const [detailModal, setDetailModal] = useState({ isOpen: false, data: null });
   const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, id: null, nombre: '' });
+  const [statusDialog, setStatusDialog] = useState({ isOpen: false, categoria: null, nextEstado: 'Activo' });
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  const fetchCategorias = () => {
+    setIsLoading(true);
+    setLoadError(null);
+    return getCategorias()
+      .then((data) => setCategorias(Array.isArray(data) ? data : []))
+      .catch((error) => {
+        setCategorias([]);
+        setLoadError(error?.message || 'No se pudieron cargar las categorías');
+      })
+      .finally(() => setIsLoading(false));
+  };
 
   useEffect(() => {
-    getCategorias()
-      .then((data) => setCategorias(Array.isArray(data) ? data : []))
-      .catch(() => setCategorias([]));
+    fetchCategorias();
   }, []);
 
   const filteredCategorias = categorias.filter((c) => {
@@ -42,7 +56,7 @@ export function useCategorias() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar la categoría');
+      toast.error(error?.data?.message || 'No se pudo guardar la categoría');
     } finally {
       setIsSaving(false);
     }
@@ -63,6 +77,39 @@ export function useCategorias() {
     }
   };
 
+  const handleRequestStatusChange = (categoria) => {
+    if (!categoria) return;
+    const isCurrentlyActive = String(categoria.estado || '').toLowerCase() === 'activo';
+    const nextEstado = isCurrentlyActive ? 'Inactivo' : 'Activo';
+    setStatusDialog({
+      isOpen: true,
+      categoria,
+      nextEstado,
+    });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!statusDialog.categoria) return;
+    setIsUpdatingStatus(true);
+    try {
+      const { id_categoria, nombre } = statusDialog.categoria;
+      const actualizado = await cambiarEstadoCategoria(id_categoria, statusDialog.nextEstado);
+
+      setCategorias((prev) =>
+        prev.map((c) =>
+          c.id_categoria === id_categoria ? { ...c, estado: actualizado?.estado || statusDialog.nextEstado } : c
+        )
+      );
+
+      toast.success(`Estado de la categoría "${nombre}" cambiado a ${statusDialog.nextEstado}`);
+      setStatusDialog({ isOpen: false, categoria: null, nextEstado: 'Activo' });
+    } catch (error) {
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado de la categoría');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   return {
     categorias: filteredCategorias,
     rawCategorias: categorias,
@@ -76,10 +123,18 @@ export function useCategorias() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
+    isLoading,
+    loadError,
+    refetch: fetchCategorias,
     handleSave,
     handleDelete,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   };
 }
 

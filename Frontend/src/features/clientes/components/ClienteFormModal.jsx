@@ -1,174 +1,293 @@
-import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { User, Phone, Mail, MapPin } from 'lucide-react';
 import { Combobox } from '../../../shared/ui/Combobox';
+import { StepperModal } from '../../../shared/components/StepperModal';
+import { BarriosDatalist, listaBarriosDe } from '../../../shared/components/BarriosDatalist';
+import { MUNICIPIOS_ENTREGA } from '../../../shared/config/negocio';
+import { PersonaFields } from '../../../shared/components/PersonaFields';
+import { personaDe, validarPersona, personaPayload, personaCambio } from '../../../shared/utils/persona';
 
 export function ClienteFormModal({ open, onClose, cliente = null, onSave, isLoading = false }) {
-  const [nombre, setNombre] = useState('');
-  const [documento, setDocumento] = useState('');
+  // Tipo de persona, documento y nombres + apellidos o razón social.
+  const [persona, setPersona] = useState(() => personaDe(null));
   const [telefono, setTelefono] = useState('');
   const [correo, setCorreo] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [estado, setEstado] = useState('activo');
+  const [municipio, setMunicipio] = useState('');
+  const [barrio, setBarrio] = useState('');
+  const [estado, setEstado] = useState('Activo');
+  const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    if (cliente) {
-      setNombre(cliente.nombre || '');
-      setDocumento(cliente.documento || '');
-      setTelefono(cliente.telefono || '');
-      setCorreo(cliente.correo || '');
-      setDireccion(cliente.direccion || '');
-      const isInactive = String(cliente.estado ?? '').toLowerCase() === 'inactivo';
-      setEstado(isInactive ? 'inactivo' : 'activo');
+    if (open) {
+      setCurrentStep(0);
+      if (cliente) {
+        setPersona(personaDe(cliente));
+        setTelefono(cliente.telefono || '');
+        setCorreo(cliente.correo || '');
+        setDireccion(cliente.direccion || '');
+        setMunicipio(cliente.municipio || '');
+        setBarrio(cliente.barrio || '');
+        const isInactive = String(cliente.estado ?? '').toLowerCase() === 'inactivo';
+        setEstado(isInactive ? 'Inactivo' : 'Activo');
+      } else {
+        setPersona(personaDe(null));
+        setTelefono('');
+        setCorreo('');
+        setDireccion('');
+        setMunicipio('');
+        setBarrio('');
+        setEstado('Activo');
+      }
     } else {
-      setNombre('');
-      setDocumento('');
-      setTelefono('');
-      setCorreo('');
-      setDireccion('');
-      setEstado('activo');
+      setCurrentStep(0);
     }
   }, [cliente, open]);
 
-  if (!open) return null;
+  const isDirty = useMemo(() => {
+    if (!open) return false;
+    if (!cliente) {
+      return personaCambio(persona, null) || telefono.trim() !== '' || correo.trim() !== '';
+    }
+    return (
+      personaCambio(persona, cliente) ||
+      telefono !== (cliente.telefono || '') ||
+      correo !== (cliente.correo || '') ||
+      direccion !== (cliente.direccion || '') ||
+      municipio !== (cliente.municipio || '') ||
+      barrio !== (cliente.barrio || '') ||
+      estado !== (cliente.estado || 'Activo')
+    );
+  }, [open, cliente, persona, telefono, correo, direccion, municipio, barrio, estado]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!nombre.trim() || !documento.trim()) return;
+  const validateStep1 = useCallback(() => validarPersona(persona), [persona]);
+
+  const validateStep2 = useCallback(() => {
+    if (correo.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(correo.trim())) {
+        return 'El correo electrónico no tiene un formato válido.';
+      }
+    }
+    return true;
+  }, [correo]);
+
+  const handleSubmit = useCallback(() => {
+    const v1 = validateStep1();
+    if (v1 !== true) {
+      setCurrentStep(0);
+      return;
+    }
+    const v2 = validateStep2();
+    if (v2 !== true) {
+      setCurrentStep(1);
+      return;
+    }
+
+    // `nombre` no se envía: el backend lo arma con nombres + apellidos o razón social.
+    const { nombre: _nombre, ...clienteSinNombre } = cliente || {};
     const payload = cliente
       ? {
-          ...cliente,
-          nombre: nombre.trim(),
-          documento: documento.trim(),
+          ...clienteSinNombre,
+          ...personaPayload(persona),
+          documento: persona.documento.trim(),
           telefono: telefono.trim() || null,
           correo: correo.trim() || null,
           direccion: direccion.trim() || null,
+          municipio,
+          barrio: barrio.trim(),
           estado,
         }
       : {
-          nombre: nombre.trim(),
-          documento: documento.trim(),
+          ...personaPayload(persona),
+          documento: persona.documento.trim(),
           telefono: telefono.trim() || null,
           correo: correo.trim() || null,
           direccion: direccion.trim() || null,
-          estado,
+          municipio,
+          barrio: barrio.trim(),
+          estado: estado || 'Activo',
         };
+
     if (onSave) {
       onSave(payload);
     } else {
       onClose();
     }
-  };
+  }, [validateStep1, validateStep2, cliente, persona, telefono, correo, direccion, municipio, barrio, estado, onSave, onClose]);
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="form-modal-panel bg-card p-6 rounded-lg max-w-md w-full border border-border space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <h2 className="text-lg font-bold">{cliente ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
-          <button
-            onClick={onClose}
-            type="button"
-            className="p-2 -mr-2 -mt-2 rounded-lg hover:bg-muted text-muted-foreground"
-            aria-label="Cerrar formulario"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="modal-form-grid space-y-4">
-          <div className="modal-field-wide">
-            <label htmlFor="cliente_nombre" className="block mb-2 text-sm font-medium">Nombre / Razón Social *</label>
-            <input
-              id="cliente_nombre"
-              name="nombre"
-              type="text"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-              maxLength={150}
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="cliente_documento" className="block mb-2 text-sm font-medium">Documento / Cédula / NIT *</label>
-            <input
-              id="cliente_documento"
-              name="documento"
-              type="text"
-              value={documento}
-              onChange={(e) => setDocumento(e.target.value)}
-              maxLength={20}
-              required
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-            />
-          </div>
-          <div>
-            <label htmlFor="cliente_telefono" className="block mb-2 text-sm font-medium">Teléfono</label>
-            <input
-              id="cliente_telefono"
-              name="telefono"
-              type="tel"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              maxLength={20}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-              placeholder="+57 300 000 0000"
-            />
-          </div>
-          <div className="modal-field-wide">
-            <label htmlFor="cliente_correo" className="block mb-2 text-sm font-medium">Correo Electrónico</label>
-            <input
-              id="cliente_correo"
-              name="correo"
-              type="email"
-              value={correo}
-              onChange={(e) => setCorreo(e.target.value)}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-              maxLength={150}
-            />
-          </div>
-          <div className="modal-field-wide">
-            <label htmlFor="cliente_direccion" className="block mb-2 text-sm font-medium">Dirección</label>
-            <textarea
-              id="cliente_direccion"
-              name="direccion"
-              rows={2}
-              value={direccion}
-              onChange={(e) => setDireccion(e.target.value)}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-              maxLength={255}
-            />
-          </div>
-          <div className="modal-field-wide">
-            <label htmlFor="cliente_estado" className="block mb-2 text-sm font-medium">Estado</label>
+  const steps = useMemo(() => [
+    {
+      id: 'datos-cliente',
+      title: 'Datos del cliente',
+      description: 'Tipo de persona, documento, nombre o razón social y estado',
+      validate: validateStep1,
+      content: (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
+          <PersonaFields persona={persona} onChange={setPersona} prefijo="cliente" autoFocus />
+
+          {/* Estado */}
+          <div className="sm:col-span-1">
+            <label htmlFor="cliente_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Estado comercial <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
             <Combobox
               id="cliente_estado"
               name="estado"
               value={estado}
               onChange={(e) => setEstado(e.target.value)}
               options={[
-                { value: 'activo', label: 'Activo' },
-                { value: 'inactivo', label: 'Inactivo' },
+                { value: 'Activo', label: 'Activo' },
+                { value: 'Inactivo', label: 'Inactivo' },
               ]}
             />
           </div>
-          <div className="flex gap-2 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-muted text-sm font-medium transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 text-sm font-medium transition-colors cursor-pointer shadow-xs"
-            >
-              {isLoading ? 'Guardando...' : 'Guardar'}
-            </button>
+
+          {/* Ayuda contextual */}
+          <div className="sm:col-span-2 p-3.5 rounded-xl bg-muted/40 border border-border/60 flex items-start gap-3 text-xs text-muted-foreground">
+            <User className="size-4 text-[#C1502D] dark:text-[#E8B23D] shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-foreground block mb-0.5">Perfil del cliente</span>
+              En el siguiente paso podrás registrar los canales de contacto y la dirección habitual de entrega de pedidos.
+            </div>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      ),
+    },
+    {
+      id: 'contacto-despacho',
+      title: 'Contacto y despacho',
+      description: 'Teléfono, correo y dirección de entrega de pedidos',
+      validate: validateStep2,
+      content: (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
+          {/* Teléfono */}
+          <div className="sm:col-span-1">
+            <label htmlFor="cliente_telefono" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Teléfono / WhatsApp
+            </label>
+            <div className="relative">
+              <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <input
+                id="cliente_telefono"
+                name="telefono"
+                type="tel"
+                maxLength={20}
+                placeholder="+57 300 123 4567"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Correo */}
+          <div className="sm:col-span-1">
+            <label htmlFor="cliente_correo" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Correo de facturación
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <input
+                id="cliente_correo"
+                name="correo"
+                type="email"
+                maxLength={150}
+                placeholder="pedidos@cliente.com"
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Municipio y barrio (barrios de Medellín desde la API) */}
+          <div className="sm:col-span-1">
+            <label htmlFor="cliente_municipio" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Municipio
+            </label>
+            <select
+              id="cliente_municipio"
+              name="municipio"
+              value={municipio}
+              onChange={(e) => setMunicipio(e.target.value)}
+              className="w-full h-10 px-3 border border-input bg-input-background rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+            >
+              <option value="">Selecciona…</option>
+              {MUNICIPIOS_ENTREGA.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div className="sm:col-span-1">
+            <label htmlFor="cliente_barrio" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Barrio
+            </label>
+            <input
+              id="cliente_barrio"
+              name="barrio"
+              type="text"
+              maxLength={80}
+              list={listaBarriosDe(municipio)}
+              autoComplete="off"
+              placeholder="Ej. Aranjuez"
+              value={barrio}
+              onChange={(e) => setBarrio(e.target.value)}
+              className="w-full h-10 px-3 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+            />
+            <BarriosDatalist municipio={municipio} />
+          </div>
+
+          {/* Dirección */}
+          <div className="sm:col-span-2">
+            <label htmlFor="cliente_direccion" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Dirección de entrega de pedidos
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <input
+                id="cliente_direccion"
+                name="direccion"
+                type="text"
+                maxLength={255}
+                placeholder="Ej. Calle 42 # 5-10, Barrio Belén"
+                value={direccion}
+                onChange={(e) => setDireccion(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Dirección utilizada por defecto para la logística de despachos y repartos.
+            </p>
+          </div>
+
+          {/* Ayuda contextual */}
+          <div className="sm:col-span-2 p-3.5 rounded-xl bg-muted/40 border border-border/60 flex items-start gap-3 text-xs text-muted-foreground">
+            <MapPin className="size-4 text-[#5A7A3A] shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-foreground block mb-0.5">Integración con Pedidos y Ventas</span>
+              Este cliente estará disponible de inmediato para emitir facturas en mostrador y registrar órdenes de despacho.
+            </div>
+          </div>
+        </div>
+      ),
+    },
+  ], [persona, estado, telefono, correo, direccion, municipio, barrio, validateStep1, validateStep2]);
+
+  return (
+    <StepperModal
+      isOpen={open}
+      onClose={onClose}
+      category="CLIENTES"
+      title={cliente ? 'Editar Cliente' : 'Nuevo Cliente'}
+      subtitle="Gestiona los datos comerciales y ubicación de entrega del cliente"
+      steps={steps}
+      currentStep={currentStep}
+      onStepChange={setCurrentStep}
+      onSubmit={handleSubmit}
+      isLoading={isLoading}
+      submitLabel={cliente ? 'Guardar Cambios' : 'Crear Cliente'}
+      isDirty={isDirty}
+    />
   );
 }
+
+export default ClienteFormModal;

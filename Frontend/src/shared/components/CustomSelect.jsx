@@ -107,7 +107,7 @@ export function CustomSelect({
   };
 
   return (
-    <div ref={containerRef} className={`relative inline-block ${className || 'min-w-[180px]'}`}>
+    <div ref={containerRef} className={`relative w-full min-w-0 max-w-full select-none ${className || ''}`}>
       {/* Botón Trigger */}
       <button
         id={id}
@@ -116,17 +116,17 @@ export function CustomSelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-2.5 h-10 px-3.5 py-2 rounded-lg border text-sm font-medium transition-all cursor-pointer select-none ${
+        className={`w-full flex items-center justify-between gap-2 h-10 px-3.5 py-2 rounded-lg border text-sm font-medium transition-all cursor-pointer select-none box-border min-w-0 max-w-full overflow-hidden ${
           isOpen
             ? 'border-[#C1502D] dark:border-[#E8B23D] ring-2 ring-[#C1502D]/15 dark:ring-[#E8B23D]/20 bg-card text-foreground'
             : 'border-input bg-input-background text-foreground hover:border-[#C1502D]/40 dark:hover:border-[#E8B23D]/40'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : 'shadow-xs'}`}
       >
-        <span className="truncate text-left block flex-1">
+        <span className="truncate text-left block flex-1 min-w-0 text-ellipsis overflow-hidden whitespace-nowrap">
           {displayLabel}
         </span>
         <ChevronDown
-          className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200 ease-out ${
+          className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200 ease-out ml-auto ${
             isOpen ? 'rotate-180 text-[#C1502D] dark:text-[#E8B23D]' : 'rotate-0'
           }`}
         />
@@ -140,11 +140,11 @@ export function CustomSelect({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute left-0 right-0 top-full mt-1.5 min-w-[200px] max-h-60 overflow-y-auto rounded-xl border border-border bg-card dark:bg-[#111820] shadow-xl p-1 z-50 custom-scrollbar flex flex-col gap-0.5"
+            className="absolute left-0 top-full mt-1.5 w-full min-w-full max-h-60 overflow-y-auto rounded-xl border border-border bg-card dark:bg-[#111820] shadow-xl p-1 z-50 custom-scrollbar flex flex-col gap-0.5"
             role="listbox"
           >
             {normalizedOptions.length === 0 ? (
-              <div className="px-3 py-2 text-xs text-muted-foreground text-center">
+              <div className="px-3 py-2 text-xs text-muted-foreground text-center truncate">
                 Sin opciones disponibles
               </div>
             ) : (
@@ -157,15 +157,15 @@ export function CustomSelect({
                     role="option"
                     aria-selected={isSelected}
                     onClick={() => handleSelect(opt.value)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors cursor-pointer text-left ${
+                    className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors cursor-pointer text-left min-w-0 ${
                       isSelected
                         ? 'bg-[#FFE1D0] dark:bg-[#C1502D]/20 text-[#8C491A] dark:text-[#E8B23D] font-bold'
                         : 'text-foreground hover:bg-[#FFFBF0] dark:hover:bg-[#1A232F]'
                     }`}
                   >
-                    <span className="truncate flex-1">{opt.label}</span>
+                    <span className="truncate flex-1 min-w-0 text-left text-ellipsis overflow-hidden whitespace-nowrap">{opt.label}</span>
                     {isSelected && (
-                      <Check className="w-4 h-4 text-[#C1502D] dark:text-[#E8B23D] shrink-0 ml-2" />
+                      <Check className="w-4 h-4 text-[#C1502D] dark:text-[#E8B23D] shrink-0 ml-auto" />
                     )}
                   </button>
                 );

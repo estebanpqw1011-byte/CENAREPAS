@@ -248,7 +248,7 @@ export function Combobox({
   return (
     <div
       ref={containerRef}
-      className={cn('relative w-full select-none', className)}
+      className={cn('relative w-full min-w-0 max-w-full select-none', className)}
       {...rest}
     >
       {/* Hidden input for HTML form validation if required */}
@@ -275,15 +275,15 @@ export function Combobox({
           }
         }}
         className={cn(
-          'flex min-h-10 w-full items-center justify-between gap-2 rounded-lg border border-input bg-input-background px-3 py-2 text-sm text-foreground transition-all duration-150 shadow-2xs',
-          isOpen ? 'ring-2 ring-ring ring-offset-2 border-primary' : 'hover:border-muted-foreground/40',
+          'flex h-10 w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-lg border border-input bg-input-background px-3 text-sm text-foreground transition-all duration-150 shadow-2xs box-border overflow-hidden',
+          isOpen ? 'ring-2 ring-ring ring-offset-1 border-primary' : 'hover:border-muted-foreground/40',
           disabled && 'cursor-not-allowed opacity-50 bg-muted/30'
         )}
       >
-        <div className="flex flex-1 items-center gap-1.5 overflow-hidden">
+        <div className="flex flex-1 items-center min-w-0 overflow-hidden h-full">
           {isOpen ? (
-            <div className="flex w-full items-center gap-2">
-              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="flex w-full items-center gap-2 min-w-0 overflow-hidden h-full">
+              <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <input
                 ref={inputRef}
                 id={inputId}
@@ -306,14 +306,14 @@ export function Combobox({
                 disabled={disabled}
                 autoComplete="off"
                 onClick={(e) => e.stopPropagation()}
-                className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
+                className="w-full min-w-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none truncate h-full leading-normal"
               />
             </div>
           ) : (
             <span
               id={inputId}
               className={cn(
-                'truncate block text-left w-full',
+                'truncate block text-left w-full min-w-0 text-ellipsis overflow-hidden whitespace-nowrap text-sm leading-normal',
                 !displayLabel && 'text-muted-foreground'
               )}
             >
@@ -322,12 +322,12 @@ export function Combobox({
           )}
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1 shrink-0 ml-auto">
           {allowClear && (displayLabel || (multiple && selectedOptions.length > 0)) && !disabled && (
             <button
               type="button"
               onClick={handleClear}
-              className="rounded-md p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              className="rounded-md p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
               aria-label="Limpiar selección"
             >
               <X className="h-3.5 w-3.5" />
@@ -335,7 +335,7 @@ export function Combobox({
           )}
           <ChevronDown
             className={cn(
-              'h-4 w-4 opacity-60 transition-transform duration-200',
+              'h-4 w-4 opacity-60 transition-transform duration-200 shrink-0',
               isOpen && 'rotate-180'
             )}
           />
@@ -348,10 +348,10 @@ export function Combobox({
           id={listboxId}
           role="listbox"
           aria-multiselectable={multiple}
-          className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-xl p-1 animate-in fade-in-50 zoom-in-95 duration-150 custom-scrollbar"
+          className="absolute left-0 top-full mt-1.5 z-50 max-h-60 w-full min-w-full overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-xl p-1 animate-in fade-in-50 zoom-in-95 duration-150 custom-scrollbar"
         >
           {filteredOptions.length === 0 ? (
-            <div className="py-3 px-3 text-center text-xs text-muted-foreground">
+            <div className="py-3 px-3 text-center text-xs text-muted-foreground truncate">
               {emptyMessage}
             </div>
           ) : (
@@ -373,15 +373,15 @@ export function Combobox({
                     }}
                     onMouseEnter={() => setHighlightedIndex(idx)}
                     className={cn(
-                      'relative flex w-full cursor-pointer select-none items-center justify-between rounded-md px-3 py-2 text-sm outline-none transition-colors duration-150',
+                      'relative flex w-full min-w-0 cursor-pointer select-none items-center justify-between gap-2 rounded-md px-3 py-2 text-sm outline-none transition-colors duration-150',
                       isHighlighted && 'bg-accent text-accent-foreground',
                       selected && 'bg-primary/10 text-primary font-medium',
                       opt.disabled && 'pointer-events-none opacity-40'
                     )}
                   >
-                    <span className="truncate pr-2">{opt.label}</span>
+                    <span className="truncate flex-1 min-w-0 text-left text-ellipsis overflow-hidden whitespace-nowrap">{opt.label}</span>
                     {selected && (
-                      <Check className="h-4 w-4 shrink-0 text-primary" />
+                      <Check className="h-4 w-4 shrink-0 text-primary ml-auto" />
                     )}
                   </div>
                 );

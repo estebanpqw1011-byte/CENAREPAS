@@ -65,15 +65,15 @@ export function SelectTrigger({ className, children, ...props }) {
       disabled={disabled}
       onClick={() => setOpen(!open)}
       className={cn(
-        'flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-input bg-input-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-2xs',
+        'flex h-10 w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-lg border border-input bg-input-background px-3 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-2xs box-border overflow-hidden',
         className
       )}
       {...props}
     >
-      <div className="flex-1 truncate text-left">{children}</div>
+      <div className="flex-1 min-w-0 truncate text-left text-ellipsis overflow-hidden whitespace-nowrap">{children}</div>
       <ChevronDown
         className={cn(
-          'h-4 w-4 opacity-50 transition-transform duration-200 shrink-0',
+          'h-4 w-4 opacity-50 transition-transform duration-200 shrink-0 ml-auto',
           open && 'rotate-180'
         )}
       />
@@ -86,7 +86,7 @@ export function SelectValue({ placeholder = 'Seleccionar...' }) {
   const displayLabel = itemsMap[selectedValue] || selectedValue;
 
   return (
-    <span className={cn('truncate block', !displayLabel && 'text-muted-foreground')}>
+    <span className={cn('truncate block min-w-0 text-ellipsis overflow-hidden whitespace-nowrap', !displayLabel && 'text-muted-foreground')}>
       {displayLabel || placeholder}
     </span>
   );
@@ -185,15 +185,15 @@ export function SelectItem({ value, className, children, disabled = false, ...pr
         if (!disabled) handleSelect(value);
       }}
       className={cn(
-        'relative flex w-full cursor-pointer select-none items-center justify-between rounded-md px-3 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors',
+        'relative flex w-full min-w-0 cursor-pointer select-none items-center justify-between gap-2 rounded-md px-3 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors',
         isSelected && 'bg-primary/10 text-primary font-medium',
         disabled && 'pointer-events-none opacity-50',
         className
       )}
       {...props}
     >
-      <span className="truncate">{children}</span>
-      {isSelected && <Check className="h-4 w-4 text-primary shrink-0 ml-2" />}
+      <span className="truncate flex-1 min-w-0 text-ellipsis overflow-hidden whitespace-nowrap">{children}</span>
+      {isSelected && <Check className="h-4 w-4 text-primary shrink-0 ml-auto" />}
     </div>
   );
 }

@@ -8,6 +8,9 @@ export default function ConfirmDialog({
   message = 'Esta acción no se puede deshacer.',
   confirmText = 'Eliminar',
   cancelText = 'Cancelar',
+  confirmVariant = 'danger',
+  loadingText,
+  icon: CustomIcon,
   onConfirm,
   onCancel,
   isLoading = false,
@@ -25,6 +28,35 @@ export default function ConfirmDialog({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, isLoading, onCancel]);
+
+  const getVariantStyles = () => {
+    switch (confirmVariant) {
+      case 'success':
+        return {
+          iconBg: 'bg-[#5A7A3A]/15 border-[#5A7A3A]/30 text-[#5A7A3A] dark:text-[#AEC094]',
+          buttonBg: 'bg-[#5A7A3A] hover:bg-[#4A6430] text-white shadow-[#5A7A3A]/25',
+        };
+      case 'warning':
+        return {
+          iconBg: 'bg-[#E8B23D]/20 border-[#E8B23D]/30 text-[#B87A18] dark:text-[#E8B23D]',
+          buttonBg: 'bg-[#C1502D] hover:bg-[#8A3418] text-white shadow-[#C1502D]/25',
+        };
+      case 'primary':
+        return {
+          iconBg: 'bg-[#C1502D]/15 border-[#C1502D]/30 text-[#C1502D] dark:text-[#E8B23D]',
+          buttonBg: 'bg-[#C1502D] hover:bg-[#8A3418] text-white shadow-[#C1502D]/25',
+        };
+      case 'danger':
+      default:
+        return {
+          iconBg: 'bg-[#FFE1D0] dark:bg-[#C1502D]/20 border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] text-[#C1502D] dark:text-[#E8B23D]',
+          buttonBg: 'bg-[#C1502D] hover:bg-[#8A3418] text-white shadow-[#C1502D]/25',
+        };
+    }
+  };
+
+  const styles = getVariantStyles();
+  const IconComponent = CustomIcon || AlertTriangle;
 
   return (
     <AnimatePresence>
@@ -64,10 +96,10 @@ export default function ConfirmDialog({
               <X className="size-4" />
             </button>
 
-            {/* Encabezado con Icono de Advertencia Estilizado */}
+            {/* Encabezado con Icono Estilizado */}
             <div className="flex items-start gap-4 mb-3">
-              <div className="size-12 rounded-2xl bg-[#FFE1D0] dark:bg-[#C1502D]/20 border border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] flex items-center justify-center text-[#C1502D] dark:text-[#E8B23D] shrink-0 shadow-xs">
-                <AlertTriangle className="size-6 stroke-[2.2]" />
+              <div className={`size-12 rounded-2xl border flex items-center justify-center shrink-0 shadow-xs ${styles.iconBg}`}>
+                <IconComponent className="size-6 stroke-[2.2]" />
               </div>
               <div className="flex-1 min-w-0 pt-0.5">
                 <h2 id="confirm-dialog-title" className="text-base sm:text-lg font-bold text-foreground leading-snug m-0">
@@ -95,12 +127,12 @@ export default function ConfirmDialog({
                 type="button"
                 onClick={onConfirm}
                 disabled={isLoading}
-                className="flex-1 h-11 px-4 bg-[#C1502D] hover:bg-[#8A3418] active:translate-y-[0.5px] text-white font-bold rounded-xl text-xs sm:text-sm shadow-md shadow-[#C1502D]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className={`flex-1 h-11 px-4 active:translate-y-[0.5px] font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${styles.buttonBg}`}
               >
                 {isLoading ? (
                   <>
                     <span className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Eliminando…</span>
+                    <span>{loadingText || (confirmText === 'Eliminar' ? 'Eliminando…' : 'Guardando…')}</span>
                   </>
                 ) : (
                   <span>{confirmText}</span>

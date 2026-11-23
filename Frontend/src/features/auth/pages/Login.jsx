@@ -3,12 +3,20 @@ import { motion } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
 import {
   Eye, EyeOff, Sparkles, ShieldCheck, ArrowRight,
-  TrendingUp, CheckCircle2, Lock, Mail, Factory,
-  Package, Laptop, Award, BarChart3, Activity
+  TrendingUp, CheckCircle2, Lock, Mail,
+  Package, Laptop, Award, BarChart3, Activity,
+  AlertCircle, Shield, ClipboardList, Briefcase,
+  Wheat, Truck, Thermometer
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useLocation } from 'react-router-dom';
+import { pasarCarritoPublico, destinoTrasAcceso } from '../../catalogo/utils/transferirCarrito';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { usePermissions } from '../../../shared/contexts/PermissionContext';
+import { getDefaultRouteForRole } from '../../../shared/config/permisos';
+import { toast } from '../../../shared/utils/toast.jsx';
 import cenarepasLogo from '../../../assets/cenarepas-icon.svg';
+import authLoginBg from '../../../assets/auth/auth-login-bg.png';
 import { Sun, Moon } from 'lucide-react';
 
 // Variantes de animación para la entrada escalonada (Stagger) del panel derecho
@@ -38,31 +46,31 @@ export default function Login({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const { isLoading, handleLogin, handleGoogleAuth, navigate } = useAuth();
+  const { isLoading, error, setError, handleLogin, navigate } = useAuth();
+  // state.desde = 'confirmar-pedido' cuando viene del carrito del catálogo público.
+  const origen = useLocation().state?.desde;
   const { theme, toggleTheme } = useTheme();
+  const { setActiveRole } = usePermissions();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const success = await handleLogin(email, password);
-    if (success) {
+    const res = await handleLogin(email, password);
+    if (res?.success && res?.usuario) {
+      const userObj = res.usuario;
+      if (userObj.id_rol) {
+        setActiveRole(userObj.id_rol);
+      }
       if (onLogin) onLogin();
-      navigate('/admin');
+      pasarCarritoPublico(userObj);
+      navigate(destinoTrasAcceso(userObj, origen, getDefaultRouteForRole(userObj.rol)));
     }
   };
 
-  // Manejador del flujo de Google Login
+  // Google: el backend todavía no valida el token de Google (Parte 6). Hasta
+  // entonces no se inicia sesión: antes se entraba con el rol 1 sin backend.
   const loginWithGoogle = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      if (handleGoogleAuth) {
-        const success = await handleGoogleAuth(tokenResponse.access_token);
-        if (success) {
-          if (onLogin) onLogin();
-          navigate('/admin');
-        }
-      } else {
-        if (onLogin) onLogin();
-        navigate('/admin');
-      }
+    onSuccess: () => {
+      toast.error('El acceso con Google aún no está disponible. Ingresa con tu correo y contraseña.');
     },
     onError: (error) => {
       console.error('Error en la autenticación con Google:', error);
@@ -110,8 +118,9 @@ export default function Login({ onLogin }) {
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-1.5 rounded-xl border border-border bg-card text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="p-1.5 rounded-xl border border-border bg-card text-foreground hover:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               title={theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
               {theme === 'dark' ? <Sun className="size-3.5 text-[#E8B23D]" /> : <Moon className="size-3.5 text-muted-foreground" />}
             </button>
@@ -143,23 +152,73 @@ export default function Login({ onLogin }) {
             </p>
           </div>
 
-          {/* Bloque Estilizado de Credenciales de Prueba */}
+          {/* Bloque Estilizado de Credenciales de Prueba con selector de Roles */}
           <div className="bg-card dark:bg-[#111820] border border-border dark:border-[rgba(148,163,184,0.14)] rounded-2xl p-3 sm:p-3.5 mb-4 shadow-[0_2px_8px_rgba(45,41,38,0.03)] dark:shadow-none">
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#C1502D]/10 dark:bg-[#E8B23D]/15 px-2 py-0.5 text-[9.5px] font-bold text-[#C1502D] dark:text-[#E8B23D] uppercase tracking-wider">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#C1502D]/10 dark:bg-[#E8B23D]/15 px-2.5 py-0.5 text-[9.5px] font-bold text-[#C1502D] dark:text-[#E8B23D] uppercase tracking-wider">
                 <ShieldCheck className="size-3 text-[#C1502D] dark:text-[#E8B23D]" />
-                Credenciales de prueba
+                Credenciales de prueba por Rol
               </span>
-              <span className="text-[10px] font-semibold text-[#5A7A3A] dark:text-[#AEC094]">Acceso Demo</span>
+              <span className="text-[10px] font-semibold text-[#5A7A3A] dark:text-[#AEC094]">Story Mapping</span>
             </div>
+            
+            {/* Botones de Selección Rápida de Rol con Iconos SVG */}
+            <div className="grid grid-cols-3 gap-1.5 mb-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('admin@sistema.com');
+                  setPassword('admin123');
+                }}
+                className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[10.5px] font-semibold transition-all cursor-pointer border text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  email === 'admin@sistema.com'
+                    ? 'bg-[#C1502D] text-white border-[#C1502D] shadow-xs'
+                    : 'bg-muted/60 hover:bg-muted text-foreground border-border'
+                }`}
+              >
+                <Shield className="size-3.5 shrink-0" />
+                <span>Admin</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('secretaria@cenarepas.com');
+                  setPassword('secretaria123');
+                }}
+                className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[10.5px] font-semibold transition-all cursor-pointer border text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  email === 'secretaria@cenarepas.com'
+                    ? 'bg-[#5A7A3A] text-white border-[#5A7A3A] shadow-xs'
+                    : 'bg-muted/60 hover:bg-muted text-foreground border-border'
+                }`}
+              >
+                <ClipboardList className="size-3.5 shrink-0" />
+                <span>Secretaria</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('vendedor@cenarepas.com');
+                  setPassword('vendedor123');
+                }}
+                className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[10.5px] font-semibold transition-all cursor-pointer border text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  email === 'vendedor@cenarepas.com'
+                    ? 'bg-[#E8B23D] text-slate-900 border-[#E8B23D] shadow-xs font-bold'
+                    : 'bg-muted/60 hover:bg-muted text-foreground border-border'
+                }`}
+              >
+                <Briefcase className="size-3.5 shrink-0" />
+                <span>Vendedor</span>
+              </button>
+            </div>
+
             <div className="space-y-1 text-xs text-muted-foreground">
               <p className="flex items-center justify-between">
                 <span className="text-muted-foreground font-medium">Email:</span>
-                <strong className="font-semibold text-foreground font-mono text-[11.5px] bg-[#FFFBF0] dark:bg-[#0B0F14] px-2 py-0.5 rounded border border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)]">admin@sistema.com</strong>
+                <strong className="font-semibold text-foreground font-mono text-[11.5px] bg-[#FFFBF0] dark:bg-[#0B0F14] px-2 py-0.5 rounded border border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)]">{email || 'admin@sistema.com'}</strong>
               </p>
               <p className="flex items-center justify-between">
                 <span className="text-muted-foreground font-medium">Contraseña:</span>
-                <strong className="font-semibold text-foreground font-mono text-[11.5px] bg-[#FFFBF0] dark:bg-[#0B0F14] px-2 py-0.5 rounded border border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)]">123456</strong>
+                <strong className="font-semibold text-foreground font-mono text-[11.5px] bg-[#FFFBF0] dark:bg-[#0B0F14] px-2 py-0.5 rounded border border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)]">{password ? '••••••••' : 'admin123'}</strong>
               </p>
             </div>
           </div>
@@ -169,8 +228,8 @@ export default function Login({ onLogin }) {
             onClick={() => loginWithGoogle()}
             whileHover={{ scale: 1.01, y: -1 }}
             whileTap={{ scale: 0.99 }}
-            type="button" 
-            className="w-full h-11 flex items-center justify-center gap-2.5 bg-card dark:bg-[#111820] border border-border dark:border-[rgba(148,163,184,0.14)] text-foreground font-semibold text-xs sm:text-[13px] rounded-xl hover:bg-muted hover:border-[#C1502D]/40 dark:hover:border-[#E8B23D]/40 hover:shadow-xs transition-all duration-200 cursor-pointer shadow-xs"
+            type="button"
+            className="w-full h-11 flex items-center justify-center gap-2.5 bg-card dark:bg-[#111820] border border-border dark:border-[rgba(148,163,184,0.14)] text-foreground font-semibold text-xs sm:text-[13px] rounded-xl hover:bg-muted hover:border-[#C1502D]/40 dark:hover:border-[#E8B23D]/40 hover:shadow-xs transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <svg className="size-4.5 shrink-0" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.58c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -191,20 +250,46 @@ export default function Login({ onLogin }) {
           {/* Formulario Estándar */}
           <form onSubmit={handleSubmit} className="space-y-3">
             
+            {/* Mensaje de Error en Login */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                id="login-error"
+                className="flex items-start gap-2.5 p-3 rounded-xl bg-[#C1502D]/10 dark:bg-[#C1502D]/20 border border-[#C1502D]/30 text-[#C1502D] dark:text-[#FFAAA0] text-xs leading-snug"
+                role="alert"
+              >
+                <AlertCircle className="size-4 shrink-0 text-[#C1502D] dark:text-[#FFAAA0] mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold">{error}</p>
+                </div>
+              </motion.div>
+            )}
+
             {/* Campo Correo */}
             <div>
-              <label className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+              <label htmlFor="login-email" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
                 Correo Electrónico <span className="text-[#C1502D] dark:text-[#E8B23D]">*</span>
               </label>
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <input 
-                  type="email" 
+                <input
+                  id="login-email"
+                  type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@sistema.com" 
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError('');
+                  }}
+                  placeholder="admin@sistema.com"
                   autoComplete="email"
-                  className="w-full h-11 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] text-foreground text-xs sm:text-sm placeholder:text-muted-foreground rounded-xl pl-10 pr-3.5 transition-all duration-200 focus:bg-white dark:focus:bg-[#111820] focus:border-[#C1502D] dark:focus:border-[#E8B23D] focus:ring-2 focus:ring-[#C1502D]/15 dark:focus:ring-[#E8B23D]/20 focus:outline-none"
+                  aria-invalid={!!error}
+                  aria-describedby={error ? 'login-error' : undefined}
+                  className={`w-full h-11 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm placeholder:text-muted-foreground rounded-xl pl-10 pr-3.5 transition-all duration-200 focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
+                    error
+                      ? 'border-[#C1502D] dark:border-[#E05238] focus:border-[#C1502D] dark:focus:border-[#E05238] focus:ring-[#C1502D]/20 dark:focus:ring-[#E05238]/25'
+                      : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] dark:focus:border-[#E8B23D] focus:ring-[#C1502D]/15 dark:focus:ring-[#E8B23D]/20'
+                  }`}
                   required
                 />
               </div>
@@ -212,25 +297,35 @@ export default function Login({ onLogin }) {
 
             {/* Campo Contraseña */}
             <div>
-              <label className="block text-[11.5px] font-bold text-foreground/90 mb-1">
+              <label htmlFor="login-password" className="block text-[11.5px] font-bold text-foreground/90 mb-1">
                 Contraseña <span className="text-[#C1502D] dark:text-[#E8B23D]">*</span>
               </label>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <input 
-                  type={showPassword ? 'text' : 'password'} 
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••" 
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) setError('');
+                  }}
+                  placeholder="••••••••"
                   autoComplete="current-password"
-                  className="w-full h-11 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] text-foreground text-xs sm:text-sm placeholder:text-muted-foreground rounded-xl pl-10 pr-11 transition-all duration-200 focus:bg-white dark:focus:bg-[#111820] focus:border-[#C1502D] dark:focus:border-[#E8B23D] focus:ring-2 focus:ring-[#C1502D]/15 dark:focus:ring-[#E8B23D]/20 focus:outline-none"
+                  aria-invalid={!!error}
+                  aria-describedby={error ? 'login-error' : undefined}
+                  className={`w-full h-11 bg-[#FFFBF0]/60 dark:bg-[#0E141B] border text-foreground text-xs sm:text-sm placeholder:text-muted-foreground rounded-xl pl-10 pr-11 transition-all duration-200 focus:bg-white dark:focus:bg-[#111820] focus:outline-none focus:ring-2 ${
+                    error
+                      ? 'border-[#C1502D] dark:border-[#E05238] focus:border-[#C1502D] dark:focus:border-[#E05238] focus:ring-[#C1502D]/20 dark:focus:ring-[#E05238]/25'
+                      : 'border-[#E8DCC0] dark:border-[rgba(148,163,184,0.18)] focus:border-[#C1502D] dark:focus:border-[#E8B23D] focus:ring-[#C1502D]/15 dark:focus:ring-[#E8B23D]/20'
+                  }`}
                   required
                 />
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-foreground hover:text-[#C1502D] dark:hover:text-[#E8B23D] transition-colors cursor-pointer"
-                  aria-label="Mostrar u ocultar contraseña"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-foreground hover:text-[#C1502D] dark:hover:text-[#E8B23D] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] rounded-md"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 >
                   {showPassword ? (
                     <EyeOff className="size-4" />
@@ -243,20 +338,21 @@ export default function Login({ onLogin }) {
 
             {/* Opciones Recordarme / Olvidó Contraseña */}
             <div className="flex items-center justify-between pt-0.5">
-              <label className="flex items-center text-[11.5px] text-muted-foreground cursor-pointer select-none">
-                <input 
-                  type="checkbox" 
+              <label htmlFor="login-remember" className="flex items-center text-[11.5px] text-muted-foreground cursor-pointer select-none">
+                <input
+                  id="login-remember"
+                  type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="size-3.5 rounded border-border text-[#C1502D] dark:text-[#E8B23D] accent-[#C1502D] dark:accent-[#E8B23D] focus:ring-0 mr-1.5 cursor-pointer" 
+                  className="size-3.5 rounded border-border text-[#C1502D] dark:text-[#E8B23D] accent-[#C1502D] dark:accent-[#E8B23D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background mr-1.5 cursor-pointer"
                 />
                 Recordarme
               </label>
-              
+
               <button
                 type="button"
                 onClick={() => navigate('/admin/forgot-password')}
-                className="text-[11.5px] font-semibold text-[#C1502D] dark:text-[#E8B23D] hover:text-[#8A3418] dark:hover:text-[#F0C05E] transition-colors bg-transparent border-0 cursor-pointer p-0"
+                className="text-[11.5px] font-semibold text-[#C1502D] dark:text-[#E8B23D] hover:text-[#8A3418] dark:hover:text-[#F0C05E] transition-colors bg-transparent border-0 cursor-pointer p-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 ¿Olvidaste tu contraseña?
               </button>
@@ -290,10 +386,10 @@ export default function Login({ onLogin }) {
           <div className="text-center mt-3.5">
             <p className="text-xs text-muted-foreground">
               ¿Aún no tienes una cuenta?{' '}
-              <button 
+              <button
                 type="button"
-                onClick={() => navigate('/register')} 
-                className="text-[#C1502D] dark:text-[#E8B23D] font-bold hover:text-[#8A3418] dark:hover:text-[#F0C05E] hover:underline bg-transparent border-0 cursor-pointer p-0 ml-1 transition-colors"
+                onClick={() => navigate('/register', { state: { desde: origen } })}
+                className="text-[#C1502D] dark:text-[#E8B23D] font-bold hover:text-[#8A3418] dark:hover:text-[#F0C05E] hover:underline bg-transparent border-0 cursor-pointer p-0 ml-1 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1502D] dark:focus-visible:ring-[#E8B23D] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Regístrate aquí
               </button>
@@ -309,182 +405,132 @@ export default function Login({ onLogin }) {
 
       </motion.div>
 
-      {/* ════════════════════ PANEL DERECHO — BRANDING / DASHBOARD MOCKUP ════════════════════ */}
+      {/* ════════════════════ PANEL DERECHO — PANEL EDITORIAL & TELEMETRÍA VIVA DE PLANTA ════════════════════ */}
       <motion.div
         initial={{ opacity: 0, x: 24 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.65, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-        className="hidden lg:flex lg:w-[50%] xl:w-[52%] p-5 xl:p-6 h-screen overflow-hidden"
+        className="hidden lg:flex lg:w-[50%] xl:w-[52%] relative bg-[#110d0b] flex-col justify-between p-8 sm:p-12 md:p-14 lg:p-14 xl:p-16 overflow-hidden h-screen"
       >
-        <div className="w-full h-full bg-gradient-to-br from-[#1E0E07] via-[#160803] to-[#0C0402] rounded-3xl xl:rounded-[2.25rem] p-7 xl:p-9 flex flex-col justify-between relative overflow-hidden border border-white/10 shadow-[0_25px_70px_-15px_rgba(25,12,6,0.35)]">
-          
-          {/* Resplandores ambientales de marca */}
-          <div className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-[radial-gradient(circle,rgba(193,80,45,0.35)_0%,transparent_70%)] blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 -left-20 size-80 rounded-full bg-[radial-gradient(circle,rgba(232,178,61,0.2)_0%,transparent_70%)] blur-3xl" />
+        {/* Fotografía de fondo de producción de arepas */}
+        <img
+          src={authLoginBg}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
 
-          {/* Encabezado del Showcase con Acento Tipográfico Elegante Scoped al Login */}
-          <div className="relative z-10 max-w-lg">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1 text-white/90 backdrop-blur-md mb-3 shadow-xs">
-              <Activity className="size-3.5 text-[#E8B23D]" />
-              <span className="landing-eyebrow text-[10.5px] text-[#E8B23D]">Monitoreo Operativo</span>
-            </div>
-            <h2 className="text-2xl xl:text-3xl font-bold text-white leading-tight tracking-tight">
-              Gestión inteligente para
-              <span 
-                className="block font-serif italic font-normal text-[#FBD28A] text-[1.02em] mt-0.5 tracking-normal"
-                style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
-              >
-                tu fábrica de alimentos
-              </span>
-            </h2>
-            <p className="text-[#FFFBF0]/80 text-xs sm:text-[13px] leading-relaxed mt-2 max-w-md font-normal">
-              Métricas en tiempo real, control de recetas, trazabilidad de lotes y despacho diario en una plataforma unificada.
-            </p>
+        {/* Fondo Editorial Orgánico Masarepas con overlay ligero para mantener nitidez de la foto */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#2a1308] via-[#241b07] to-[#0d1d13] opacity-45 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0C0402]/65 via-transparent to-[#1E0E07]/35 pointer-events-none" />
+
+        {/* Capa de texturizado y halos orgánicos */}
+        <div className="pointer-events-none absolute -top-32 -right-32 w-96 h-96 rounded-full bg-[#f66018]/15 blur-3xl" />
+        <div className="pointer-events-none absolute top-1/2 left-1/4 w-80 h-80 rounded-full bg-[#efc200]/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-20 w-96 h-96 rounded-full bg-[#00b954]/15 blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(#ffb599_1px,transparent_1px)] [background-size:24px_24px]" />
+
+        {/* Encabezado Editorial Superior */}
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#161310]/50 backdrop-blur-md border border-white/10 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-[#4ae176]"></span>
+            <span className="text-[11px] font-mono text-[#eae1db] uppercase tracking-wider font-medium">Línea de Ensamble 01 · Activa</span>
           </div>
+          <div className="hidden sm:flex items-center gap-2 text-[#e2bfb2] text-[11px] font-mono">
+            <Thermometer className="size-4 text-[#efc200]" />
+            <span>Cocción Nixtamal: 92°C</span>
+          </div>
+        </div>
 
-          {/* ─── Mockup Interactivo con Animación Escalonada (Stagger) ─── */}
+        {/* Títulos Editoriales de Gran Escala y Bento de Tarjetas */}
+        <div className="relative z-10 my-auto py-6 max-w-xl">
+          <span className="text-[11.5px] font-mono uppercase tracking-widest text-[#ffb599] block mb-2.5 font-semibold">
+            Arquitectura Operativa de Alimentos
+          </span>
+          <h2 className="text-2xl sm:text-3xl xl:text-[34px] text-[#eae1db] font-bold tracking-tight leading-[1.15]">
+            Gestiona tu producción, pedidos y ventas en un solo lugar.
+          </h2>
+          <p className="text-sm sm:text-[14.5px] text-[#e2bfb2] mt-3 leading-relaxed font-light">
+            El sistema ERP integral diseñado para la excelencia operativa y el legado artesanal de <span className="text-[#eae1db] font-medium">Masarepas</span>.
+          </p>
+
+          {/* Bento de Tarjetas Flotantes Glassmorphic (Telemetría de Planta) */}
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="relative z-10 flex-1 w-full bg-[#FFFBF0] rounded-2xl border border-[#E8DCC0] shadow-2xl overflow-hidden flex transform translate-y-3 hover:translate-y-1 transition-transform duration-500 ease-out mt-5"
+            className="mt-6 sm:mt-7 flex flex-col gap-3.5"
           >
-            
-            {/* Sidebar del Mockup */}
-            <div className="w-16 md:w-44 bg-[#F5ECD8] border-r border-[#E8DCC0] p-3.5 flex flex-col gap-2.5">
-              <div className="w-7 h-7 bg-[#C1502D] rounded-xl mb-1 flex items-center justify-center text-white shadow-xs">
-                <Factory className="size-4" />
-              </div>
-              <div className="w-full h-2.5 bg-[#C1502D]/25 rounded-full" />
-              <div className="w-3/4 h-2 bg-slate-400/30 rounded-full" />
-              <div className="w-5/6 h-2 bg-slate-400/30 rounded-full" />
-              <div className="w-2/3 h-2 bg-slate-400/30 rounded-full" />
-              <div className="w-full h-2 bg-slate-400/20 rounded-full mt-auto" />
-            </div>
-
-            {/* Contenido Principal del Mockup */}
-            <div className="flex-1 p-4 sm:p-5 flex flex-col gap-4 bg-[#FFFBF0] overflow-hidden">
-              
-              {/* Top Header Mockup */}
-              <motion.div variants={itemVariants} className="flex justify-between items-center pb-2 border-b border-[#E8DCC0]/70">
+            {/* Tarjeta 1: Lote Maíz Blanco en Producción */}
+            <motion.div
+              variants={itemVariants}
+              className="p-4 rounded-2xl bg-[#161310]/60 backdrop-blur-xl border border-white/15 shadow-xl flex flex-col gap-2.5 transition-all hover:-translate-y-0.5"
+            >
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="size-2 rounded-full bg-[#5A7A3A] animate-pulse" />
-                  <span className="text-[11px] font-bold text-slate-800 tracking-tight">Planta Bello Oriente</span>
+                  <Wheat className="size-5 text-[#ffb599]" />
+                  <span className="text-[11.5px] font-mono text-[#eae1db] font-semibold tracking-wide">LOTE MAÍZ BLANCO #408</span>
                 </div>
-                <div className="flex items-center gap-1.5 rounded-full bg-[#E8B23D]/20 border border-[#E8B23D]/40 px-2.5 py-0.5 text-[10px] font-bold text-[#8A5A14]">
-                  <span>En Producción</span>
-                </div>
-              </motion.div>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#00b954]/20 text-[#4ae176] text-[10.5px] font-mono font-semibold border border-[#4ae176]/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#4ae176] animate-ping"></span>
+                  En Cocción y Molienda
+                </span>
+              </div>
+              <div className="w-full flex items-center justify-between text-[#e2bfb2] text-xs font-normal">
+                <span>Etapa 3 de 5 · Calidad de Masa</span>
+                <span className="text-[11.5px] font-mono text-[#ffb599] font-bold">78%</span>
+              </div>
+              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-[#f66018] rounded-full w-[78%] transition-all duration-500"></div>
+              </div>
+            </motion.div>
 
-              {/* 3 Metric Cards con Stagger */}
-              <motion.div variants={itemVariants} className="grid grid-cols-3 gap-2.5">
-                
-                {/* Card 1: Verde */}
-                <div className="bg-white p-2.5 sm:p-3 rounded-2xl shadow-xs border border-[#E8DCC0] flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="size-6 rounded-lg bg-[#5A7A3A]/15 text-[#5A7A3A] flex items-center justify-center">
-                      <TrendingUp className="size-3.5" />
-                    </span>
-                    <span className="text-[9px] font-bold text-[#5A7A3A]">+14%</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-medium mt-1">Producción</span>
-                  <span className="text-xs sm:text-[13px] font-extrabold text-slate-900">1,000 pqt</span>
-                </div>
-
-                {/* Card 2: Oro */}
-                <div className="bg-white p-2.5 sm:p-3 rounded-2xl shadow-xs border border-[#E8DCC0] flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="size-6 rounded-lg bg-[#E8B23D]/20 text-[#8A5A14] flex items-center justify-center">
-                      <Award className="size-3.5" />
-                    </span>
-                    <span className="text-[9px] font-bold text-[#8A5A14]">99.2%</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-medium mt-1">Calidad</span>
-                  <span className="text-xs sm:text-[13px] font-extrabold text-slate-900">Lote #204</span>
-                </div>
-
-                {/* Card 3: Terracota */}
-                <div className="bg-white p-2.5 sm:p-3 rounded-2xl shadow-xs border border-[#E8DCC0] flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="size-6 rounded-lg bg-[#C1502D]/15 text-[#C1502D] flex items-center justify-center">
-                      <Package className="size-3.5" />
-                    </span>
-                    <span className="text-[9px] font-bold text-[#C1502D]">Activo</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-medium mt-1">Despacho</span>
-                  <span className="text-xs sm:text-[13px] font-extrabold text-slate-900">12 Rutas</span>
-                </div>
-
-              </motion.div>
-
-              {/* Gráficos de barras y radial simulados */}
-              <motion.div variants={itemVariants} className="flex gap-2.5 flex-1 min-h-[125px]">
-                
-                {/* Gráfico de Barras con 5 barras completas */}
-                <div className="flex-1 bg-white rounded-2xl shadow-xs border border-[#E8DCC0] p-3 flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] font-bold text-slate-700">Rendimiento por Turno</span>
-                    <BarChart3 className="size-3.5 text-slate-400" />
-                  </div>
-                  
-                  {/* Las 5 barras restauradas con colores sólidos explícitos y alturas porcentuales */}
-                  <div className="flex items-end justify-between gap-1.5 h-20 px-1 pt-2">
-                    {/* Lun */}
-                    <div className="flex-1 h-full flex flex-col justify-end items-center gap-1">
-                      <div className="w-full bg-[#E8B23D] h-[45%] rounded-t-sm" />
-                      <span className="text-[8.5px] font-semibold text-slate-500">Lun</span>
-                    </div>
-
-                    {/* Mar */}
-                    <div className="flex-1 h-full flex flex-col justify-end items-center gap-1">
-                      <div className="w-full bg-[#5A7A3A] h-[85%] rounded-t-sm" />
-                      <span className="text-[8.5px] font-semibold text-slate-500">Mar</span>
-                    </div>
-
-                    {/* Mié */}
-                    <div className="flex-1 h-full flex flex-col justify-end items-center gap-1">
-                      <div className="w-full bg-[#E2895F] h-[40%] rounded-t-sm" />
-                      <span className="text-[8.5px] font-semibold text-slate-500">Mié</span>
-                    </div>
-
-                    {/* Jue */}
-                    <div className="flex-1 h-full flex flex-col justify-end items-center gap-1">
-                      <div className="w-full bg-[#C1502D] h-[95%] rounded-t-sm" />
-                      <span className="text-[8.5px] font-semibold text-slate-500">Jue</span>
-                    </div>
-
-                    {/* Vie */}
-                    <div className="flex-1 h-full flex flex-col justify-end items-center gap-1">
-                      <div className="w-full bg-[#5A7A3A]/85 h-[65%] rounded-t-sm" />
-                      <span className="text-[8.5px] font-semibold text-slate-500">Vie</span>
-                    </div>
+            {/* Grid 2 Columnas para Tarjetas 2 y 3 */}
+            <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
+              {/* Tarjeta 2: Producción Diaria */}
+              <div className="p-4 rounded-2xl bg-[#161310]/60 backdrop-blur-xl border border-white/15 shadow-xl flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[#e2bfb2] mb-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-semibold">Producción Diaria</span>
+                  <div className="flex items-center gap-1 text-[#efc200] text-[11px] font-mono font-semibold">
+                    <TrendingUp className="size-3.5" />
+                    <span>+14.2%</span>
                   </div>
                 </div>
-
-                {/* Gráfico Circular de Progreso */}
-                <div className="w-[38%] bg-white rounded-2xl shadow-xs border border-[#E8DCC0] p-3 flex flex-col items-center justify-center">
-                  <div className="relative size-14 flex items-center justify-center">
-                    <motion.div
-                      initial={{ rotate: -90, opacity: 0 }}
-                      animate={{ rotate: 0, opacity: 1 }}
-                      transition={{ duration: 0.8, delay: 0.3 }}
-                      className="size-full rounded-full border-[5px] border-[#E8B23D]/30 border-t-[#C1502D] border-r-[#5A7A3A]"
-                    />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-[10px] font-extrabold text-slate-900">94%</span>
-                    </div>
-                  </div>
-                  <span className="text-[9.5px] font-bold text-slate-700 mt-2 text-center">Meta Cumplida</span>
+                <div>
+                  <div className="text-xl sm:text-2xl text-[#eae1db] font-bold tracking-tight">48,250</div>
+                  <div className="text-xs text-[#e2bfb2] mt-0.5">arepas listas empacadas</div>
                 </div>
+              </div>
 
-              </motion.div>
-
-            </div>
+              {/* Tarjeta 3: Despacho a CEDIS */}
+              <div className="p-4 rounded-2xl bg-[#161310]/60 backdrop-blur-xl border border-white/15 shadow-xl flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[#e2bfb2] mb-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-semibold">Despacho a CEDIS</span>
+                  <Truck className="size-4 text-[#4ae176]" />
+                </div>
+                <div>
+                  <div className="text-xl sm:text-2xl text-[#eae1db] font-bold tracking-tight">5 rutas</div>
+                  <div className="text-xs text-[#e2bfb2] mt-0.5">activas hoy en distribución</div>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
-          
+        </div>
+
+        {/* Pie de Panel Editorial */}
+        <div className="relative z-10 pt-4 flex flex-wrap items-center justify-between gap-4 text-[#e2bfb2] text-[10.5px] font-mono border-t border-white/10">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded bg-black/40 border border-white/10">Módulo Molienda</span>
+            <span className="px-2 py-0.5 rounded bg-black/40 border border-white/10">Amasado Continuo</span>
+            <span className="px-2 py-0.5 rounded bg-black/40 border border-white/10">Logística Fría</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[#ffb599]">
+            <ShieldCheck className="size-3.5" />
+            <span>Certificación BPM & Calidad Artesanal</span>
+          </div>
         </div>
       </motion.div>
 
     </div>
   );
-}
+}

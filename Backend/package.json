@@ -7,6 +7,10 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "start:staging": "node src/server.js --env=staging",
+    "dev:staging": "nodemon src/server.js --env=staging",
+    "test:staging": "node --test \"tests/**/*.test.js\"",
+    "migrar:local": "node scripts/migrar-local.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -20,11 +24,13 @@
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "multer": "^2.4.0",
     "pg": "^8.13.1"
   },
   "devDependencies": {

@@ -157,7 +157,7 @@ function KpiCard({ icon: Icon, value, title, description, tone }) {
       variants={railItem}
       whileHover={{ y: -4, scale: 1.015 }}
       transition={{ type: 'spring', stiffness: 350, damping: 22 }}
-      className="group relative flex flex-col justify-between rounded-2xl border border-[#2a1408]/15 bg-gradient-to-b from-[#1c0d06] to-[#120703] p-5 shadow-[0_12px_24px_-8px_rgba(28,11,3,0.2)] transition-all duration-300 hover:border-[#c1502d]/45 hover:shadow-[0_20px_35px_-8px_rgba(28,11,3,0.35)] h-full"
+      className="group relative flex flex-col justify-between rounded-2xl border border-[#2a1408]/15 bg-gradient-to-b from-[#1c0d06] to-[#120703] p-5 shadow-[0_12px_24px_-8px_rgba(28,11,3,0.2)] transition-all duration-300 hover:border-[#c1502d]/45 hover:shadow-[0_20px_35px_-8px_rgba(28,11,3,0.35)] h-full w-full"
     >
       <div className="flex-1 flex flex-col">
         <div className="flex items-center justify-between gap-3">
@@ -171,7 +171,7 @@ function KpiCard({ icon: Icon, value, title, description, tone }) {
         <h3 className="mt-3.5 text-sm font-bold leading-snug text-[#fffbf0] min-h-[40px] flex items-center">{title}</h3>
         <p className="mt-1.5 text-xs leading-relaxed text-[#fffbf0]/65 line-clamp-3">{description}</p>
       </div>
-      <div className="mt-4 flex items-center gap-1 text-[10.5px] font-semibold text-[#fbd28a]/70 group-hover:text-[#fbd28a] transition-colors pt-2 border-t border-white/5">
+      <div className="mt-auto pt-3 flex items-center gap-1 text-[10.5px] font-semibold text-[#fbd28a]/70 group-hover:text-[#fbd28a] transition-colors border-t border-white/5">
         <span>Trazado en sistema</span>
         <ChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" />
       </div>
@@ -496,7 +496,7 @@ export function Ventajas() {
   return (
     <section
       id="ventajas"
-      className="relative py-24 sm:py-32 bg-[#fffbf0] text-slate-900 overflow-hidden"
+      className="relative py-20 sm:py-28 bg-[#fffbf0] text-slate-900 overflow-hidden"
     >
       {/* ─── Unión fluida en OKLCH entre Productos (tint-gold) y Ventajas (crema) ─── */}
       <SectionTransition from="var(--landing-tint-gold)" to="#fffbf0" height="h-16 sm:h-20" />

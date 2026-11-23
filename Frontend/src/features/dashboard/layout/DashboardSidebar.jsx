@@ -8,8 +8,8 @@ import { useConfiguracion } from '../../../shared/contexts/ConfiguracionContext'
 import { useDashboard } from '../hooks/useDashboard';
 
 const TABS = {
-  operacion: ['Principal', 'Operaciones'],
-  administracion: ['Catálogos y Terceros', 'Configuración'],
+  operacion: ['Compras', 'Producción', 'Ventas y Pedidos'],
+  administracion: ['Configuración'],
 };
 
 const SEDES = [

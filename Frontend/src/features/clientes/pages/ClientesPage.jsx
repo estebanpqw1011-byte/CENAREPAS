@@ -11,6 +11,10 @@ import { MetricCard } from '../../../shared/components/MetricCard';
 import { usePermissions } from '../../../shared/contexts/PermissionContext';
 import StatusSwitch from '../../../shared/components/StatusSwitch';
 import { CustomSelect } from '../../../shared/components/CustomSelect';
+import ErrorBanner from '../../../shared/components/ErrorBanner';
+import { exportToPdf } from '../../../shared/utils/exportToPdf';
+import { exportToExcel } from '../../../shared/utils/exportToExcel';
+import { documentoTexto, nombreTipoDocumento } from '../../../shared/utils/persona';
 
 export default function ClientesPage() {
   const { can } = usePermissions();
@@ -26,10 +30,18 @@ export default function ClientesPage() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
+    isLoading,
+    loadError,
+    refetch,
     handleSave,
     handleDelete,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   } = useClientes();
   const [selectedCliente, setSelectedCliente] = useState(null);
 
@@ -72,7 +84,7 @@ export default function ClientesPage() {
       {
         key: 'documento',
         label: 'Documento',
-        render: (value) => <span className="text-muted-foreground">{value}</span>,
+        render: (value, row) => <span className="text-muted-foreground">{documentoTexto(row.tipo_documento, value)}</span>,
       },
       {
         key: 'telefono',
@@ -92,7 +104,13 @@ export default function ClientesPage() {
       {
         key: 'estado',
         label: 'Estado',
-        render: (value) => <StatusSwitch value={value} />,
+        render: (value, cliente) => (
+          <StatusSwitch
+            value={value}
+            disabled={!can('clientes', 'cambiar_estado')}
+            onToggle={() => handleRequestStatusChange(cliente)}
+          />
+        ),
       },
       {
         key: 'acciones',
@@ -111,8 +129,44 @@ export default function ClientesPage() {
         ),
       },
     ],
-    [can, setDetailModal, setShowModal, setDeleteDialog]
+    [can, setDetailModal, setShowModal, setDeleteDialog, handleRequestStatusChange]
   );
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      data: filteredData,
+      columns: [
+        { header: 'ID', key: 'id_cliente' },
+        { header: 'Cliente', key: 'nombre' },
+        { header: 'Documento', accessor: (c) => documentoTexto(c.tipo_documento, c.documento) },
+        { header: 'Teléfono', key: 'telefono' },
+        { header: 'Correo', key: 'correo' },
+        { header: 'Dirección', key: 'direccion' },
+        { header: 'Estado', key: 'estado' },
+      ],
+      title: 'Reporte de Clientes',
+      subtitle: 'Directorio y contactos de clientes registrados en CENAREPAS',
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      data: filteredData,
+      columns: [
+        { header: 'ID', key: 'id_cliente', align: 'center' },
+        { header: 'Cliente / Razón Social', key: 'nombre' },
+        { header: 'Documento', accessor: (c) => documentoTexto(c.tipo_documento, c.documento), align: 'center' },
+        { header: 'Teléfono', key: 'telefono' },
+        { header: 'Correo Electrónico', key: 'correo' },
+        { header: 'Dirección', key: 'direccion' },
+        { header: 'Estado', key: 'estado', align: 'center' },
+        { header: 'Fecha de Creación', key: 'fecha_creacion', align: 'center' },
+      ],
+      title: 'Reporte de Clientes',
+      subtitle: 'Directorio y contactos de clientes registrados en CENAREPAS',
+      sheetName: 'Clientes',
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -125,20 +179,25 @@ export default function ClientesPage() {
           setSelectedCliente(null);
           setShowModal(true);
         }}
+        onExportPdf={handleExportPdf}
+        onExportExcel={handleExportExcel}
       />
 
       {/* Tarjetas de Consolidado */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
         <MetricCard index={0} title="Total Clientes" value={totalClientes} icon={UserCircle} variant="primary" />
         <MetricCard index={1} title="Clientes Activos" value={activos} icon={CheckCircle} variant="success" />
         <MetricCard index={2} title="Pedidos Históricos" value={totalPedidosHistorico} icon={ShoppingBag} variant="accent" />
         <MetricCard index={3} title="Facturación Total" value={`$${totalFacturadoHistorico.toLocaleString('es-CO')}`} icon={DollarSign} variant="warning" />
       </div>
 
+      <ErrorBanner message={loadError} onRetry={refetch} />
+
       {/* Tabla con DataTable (usa SearchFilterBar y PaginationControls internamente) */}
       <DataTable
         columns={columns}
         data={filteredData}
+        isLoading={isLoading}
         emptyIcon={UserCircle}
         entityName="clientes"
         onAdd={() => {
@@ -170,8 +229,15 @@ export default function ClientesPage() {
         title="Detalle del Cliente"
         fields={detailModal.data ? [
           { label: 'ID', value: detailModal.data.id_cliente },
-          { label: 'Cliente', value: detailModal.data.nombre },
-          { label: 'Documento', value: detailModal.data.documento },
+          { label: 'Tipo de persona', value: detailModal.data.tipo_persona || 'Natural' },
+          ...(detailModal.data.tipo_persona === 'Jurídica'
+            ? [{ label: 'Razón social', value: detailModal.data.razon_social || detailModal.data.nombre }]
+            : [
+                { label: 'Nombres', value: detailModal.data.nombres || detailModal.data.nombre },
+                { label: 'Apellidos', value: detailModal.data.apellidos || '—' },
+              ]),
+          { label: 'Tipo de documento', value: nombreTipoDocumento(detailModal.data.tipo_documento) || '—' },
+          { label: 'Número de documento', value: detailModal.data.documento },
           { label: 'Teléfono', value: detailModal.data.telefono },
           { label: 'Correo', value: detailModal.data.correo },
           { label: 'Dirección', value: detailModal.data.direccion },
@@ -199,6 +265,21 @@ export default function ClientesPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteDialog({ isOpen: false, id: null, nombre: '' })}
         isLoading={isDeleting}
+      />
+
+      {/* Modal de confirmación para Cambio de Estado */}
+      <ConfirmDialog
+        isOpen={statusDialog.isOpen}
+        title={`Cambiar Estado a ${statusDialog.nextEstado}`}
+        message={`¿Estás seguro de que deseas cambiar el estado del cliente "${statusDialog.cliente?.nombre}"${
+          statusDialog.cliente?.direccion ? ` (${statusDialog.cliente.direccion})` : ''
+        } de ${statusDialog.cliente?.estado || 'Activo'} a ${statusDialog.nextEstado}?`}
+        confirmText={`Cambiar a ${statusDialog.nextEstado}`}
+        confirmVariant={statusDialog.nextEstado === 'Activo' ? 'success' : 'warning'}
+        onConfirm={handleConfirmStatusChange}
+        onCancel={() => setStatusDialog({ isOpen: false, cliente: null, nextEstado: 'Activo' })}
+        isLoading={isUpdatingStatus}
+        loadingText="Cambiando estado…"
       />
     </div>
   );

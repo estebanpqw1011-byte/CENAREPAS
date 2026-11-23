@@ -16,16 +16,16 @@ export function MetricCard({ title, value, icon: Icon, variant = 'primary', inde
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: (index || 0) * 0.08, ease: 'easeOut' }}
-      className="bg-card p-4 rounded-xl border border-border flex items-center gap-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-default h-full w-full"
+      className="bg-card p-4 rounded-xl border border-border flex items-center gap-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-default h-full w-full min-h-[76px]"
     >
       {Icon && (
-        <div className={`p-3 rounded-lg ${iconStyle} shrink-0 transition-transform duration-200 flex items-center justify-center`}>
+        <div className={`size-11 min-w-11 min-h-11 rounded-lg ${iconStyle} shrink-0 transition-transform duration-200 flex items-center justify-center`}>
           <Icon className="w-5 h-5" />
         </div>
       )}
-      <div className="min-w-0 flex-1">
-        <p className="text-xs sm:text-sm text-muted-foreground truncate">{title}</p>
-        <h3 className="text-lg sm:text-xl font-bold text-foreground truncate mt-0.5">{value}</h3>
+      <div className="min-w-0 flex-1 flex flex-col justify-center">
+        <p className="text-xs sm:text-sm text-muted-foreground truncate leading-tight">{title}</p>
+        <h3 className="text-lg sm:text-xl font-bold text-foreground truncate mt-0.5 leading-tight">{value}</h3>
       </div>
     </motion.div>
   );

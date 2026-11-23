@@ -12,6 +12,9 @@ import PageHeader from '../../../shared/components/PageHeader';
 import { usePermissions } from '../../../shared/contexts/PermissionContext';
 import StatusSwitch from '../../../shared/components/StatusSwitch';
 import { CustomSelect } from '../../../shared/components/CustomSelect';
+import ErrorBanner from '../../../shared/components/ErrorBanner';
+import { exportToPdf } from '../../../shared/utils/exportToPdf';
+import { exportToExcel } from '../../../shared/utils/exportToExcel';
 
 export default function UsuariosPage() {
   const { can } = usePermissions();
@@ -30,10 +33,18 @@ export default function UsuariosPage() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
+    isLoading,
+    loadError,
+    refetch,
     handleSave,
     handleDelete,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   } = useUsuarios();
 
   const [selectedUsuario, setSelectedUsuario] = useState(null);
@@ -80,14 +91,20 @@ export default function UsuariosPage() {
         ),
       },
       {
-        key: 'estado',
-        label: 'Estado',
-        render: (value) => <StatusSwitch value={value} />,
-      },
-      {
         key: 'fecha_creacion',
         label: 'Fecha de Creación',
         render: (value) => <span className="text-muted-foreground">{value}</span>,
+      },
+      {
+        key: 'estado',
+        label: 'Estado',
+        render: (value, usuario) => (
+          <StatusSwitch
+            value={value}
+            disabled={!can('usuarios', 'cambiar_estado')}
+            onToggle={() => handleRequestStatusChange(usuario)}
+          />
+        ),
       },
       {
         key: 'acciones',
@@ -124,8 +141,41 @@ export default function UsuariosPage() {
         ),
       },
     ],
-    [can, roleNames, setDetailModal, setShowModal, setDeleteDialog]
+    [can, roleNames, setDetailModal, setShowModal, setDeleteDialog, handleRequestStatusChange]
   );
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      data: filteredData,
+      columns: [
+        { header: 'ID', key: 'id_usuario' },
+        { header: 'Nombre', key: 'nombre' },
+        { header: 'Correo Electrónico', key: 'correo' },
+        { header: 'Rol', accessor: (u) => roleNames[u.id_rol] || 'Sin rol' },
+        { header: 'Fecha de Creación', key: 'fecha_creacion' },
+        { header: 'Estado', key: 'estado' },
+      ],
+      title: 'Reporte de Usuarios',
+      subtitle: 'Listado de usuarios registrados en el sistema CENAREPAS',
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      data: filteredData,
+      columns: [
+        { header: 'ID', key: 'id_usuario', align: 'center' },
+        { header: 'Nombre Completo', key: 'nombre' },
+        { header: 'Correo Electrónico', key: 'correo' },
+        { header: 'Rol Asignado', accessor: (u) => roleNames[u.id_rol] || 'Sin rol' },
+        { header: 'Fecha de Creación', key: 'fecha_creacion', align: 'center' },
+        { header: 'Estado', key: 'estado', align: 'center' },
+      ],
+      title: 'Reporte de Usuarios',
+      subtitle: 'Listado de usuarios registrados en el sistema CENAREPAS',
+      sheetName: 'Usuarios',
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -138,20 +188,25 @@ export default function UsuariosPage() {
           setSelectedUsuario(null);
           setShowModal(true);
         }}
+        onExportPdf={handleExportPdf}
+        onExportExcel={handleExportExcel}
       />
 
       {/* Tarjetas de Consolidado */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
         <MetricCard index={0} title="Total Usuarios" value={totalUsuarios} icon={Users} variant="primary" />
         <MetricCard index={1} title="Roles Asignados" value={rolesAsignados} icon={ShieldCheck} variant="accent" />
         <MetricCard index={2} title="Credenciales Configuradas" value={credencialesConfiguradas} icon={KeyRound} variant="warning" />
         <MetricCard index={3} title="Usuarios Activos" value={usuariosActivos} icon={UserCheck} variant="success" />
       </div>
 
+      <ErrorBanner message={loadError} onRetry={refetch} />
+
       {/* Tabla con DataTable */}
       <DataTable
         columns={columns}
         data={usuarios}
+        isLoading={isLoading}
         emptyIcon={Users}
         entityName="usuarios"
         onAdd={() => {
@@ -216,6 +271,19 @@ export default function UsuariosPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteDialog({ isOpen: false, id: null, nombre: '' })}
         isLoading={isDeleting}
+      />
+
+      {/* Modal de confirmación para Cambio de Estado */}
+      <ConfirmDialog
+        isOpen={statusDialog.isOpen}
+        title={`Cambiar Estado a ${statusDialog.nextEstado}`}
+        message={`¿Estás seguro de que deseas cambiar el estado del usuario "${statusDialog.usuario?.nombre}" de ${statusDialog.usuario?.estado || 'Activo'} a ${statusDialog.nextEstado}?`}
+        confirmText={`Cambiar a ${statusDialog.nextEstado}`}
+        confirmVariant={statusDialog.nextEstado === 'Activo' ? 'success' : 'warning'}
+        onConfirm={handleConfirmStatusChange}
+        onCancel={() => setStatusDialog({ isOpen: false, usuario: null, nextEstado: 'Activo' })}
+        isLoading={isUpdatingStatus}
+        loadingText="Cambiando estado…"
       />
     </div>
   );

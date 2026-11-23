@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getProductos, createProducto, updateProducto, deleteProducto } from '../services/productosService';
+import { getProductos, createProducto, updateProducto, deleteProducto, cambiarEstadoProducto } from '../services/productosService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useProductos() {
@@ -9,23 +9,28 @@ export function useProductos() {
   const [showModal, setShowModal] = useState(false);
   const [detailModal, setDetailModal] = useState({ isOpen: false, data: null });
   const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, id: null, nombre: '' });
+  const [statusDialog, setStatusDialog] = useState({ isOpen: false, producto: null, nextEstado: 'Activo' });
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [productos, setProductos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasLoadError, setHasLoadError] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
-  useEffect(() => {
-    getProductos()
-      .then((data) => {
-        if (!Array.isArray(data)) throw new Error('La respuesta de productos no es válida');
-        setProductos(data);
-      })
-      .catch(() => {
-        setHasLoadError(true);
-        toast.error('No se pudieron cargar los productos');
+  const fetchProductos = () => {
+    setIsLoading(true);
+    setLoadError(null);
+    return getProductos()
+      .then((data) => setProductos(Array.isArray(data) ? data : []))
+      .catch((error) => {
+        setProductos([]);
+        setLoadError(error?.message || 'No se pudieron cargar los productos');
       })
       .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    fetchProductos();
   }, []);
 
   const filteredProductos = useMemo(() => {
@@ -64,7 +69,7 @@ export function useProductos() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar el producto');
+      toast.error(error?.data?.message || 'No se pudo guardar el producto');
     } finally {
       setIsSaving(false);
     }
@@ -75,13 +80,48 @@ export function useProductos() {
     setIsDeleting(true);
     try {
       await deleteProducto(deleteDialog.id);
-      setProductos((prev) => prev.filter((p) => p.id_producto !== deleteDialog.id));
-      toast.success('Producto eliminado');
-    } catch (error) {
+      setProductos((prev) =>
+        prev.map((p) => (p.id_producto === deleteDialog.id ? { ...p, estado: 'Inactivo' } : p))
+      );
+      toast.success('Producto inactivado');
+    } catch {
       toast.error('No se pudo eliminar el producto');
     } finally {
       setIsDeleting(false);
       setDeleteDialog({ isOpen: false, id: null, nombre: '' });
+    }
+  };
+
+  const handleRequestStatusChange = (producto) => {
+    if (!producto) return;
+    const isCurrentlyActive = String(producto.estado || '').toLowerCase() === 'activo' || String(producto.estado || '').toLowerCase() === 'disponible';
+    const nextEstado = isCurrentlyActive ? 'Inactivo' : 'Activo';
+    setStatusDialog({
+      isOpen: true,
+      producto,
+      nextEstado,
+    });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!statusDialog.producto) return;
+    setIsUpdatingStatus(true);
+    try {
+      const { id_producto, nombre } = statusDialog.producto;
+      const actualizado = await cambiarEstadoProducto(id_producto, statusDialog.nextEstado);
+
+      setProductos((prev) =>
+        prev.map((p) =>
+          p.id_producto === id_producto ? { ...p, estado: actualizado?.estado || statusDialog.nextEstado } : p
+        )
+      );
+
+      toast.success(`Estado del producto "${nombre}" cambiado a ${statusDialog.nextEstado}`);
+      setStatusDialog({ isOpen: false, producto: null, nextEstado: 'Activo' });
+    } catch (error) {
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado del producto');
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -98,14 +138,19 @@ export function useProductos() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
     isLoading,
-    hasLoadError,
+    loadError,
+    refetch: fetchProductos,
     productos,
     filteredProductos,
     handleSave,
     handleDelete,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   };
 }
-

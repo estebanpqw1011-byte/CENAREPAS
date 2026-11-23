@@ -155,7 +155,7 @@ export function ProductsSection() {
                     : { rotate: 0, y: restLift - 8, scale: 1.03 }
                 }
                 transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-                className="group relative flex flex-col rounded-2xl bg-white border border-[#e8dcc0] p-3 pb-5 shadow-[0_10px_25px_-8px_rgba(45,20,10,0.08)] hover:shadow-xl hover:border-brand/30 transition-all duration-300 h-full"
+                className="group relative flex flex-col rounded-2xl bg-white border border-[#e8dcc0] p-3 pb-5 shadow-[0_10px_25px_-8px_rgba(45,20,10,0.08)] hover:shadow-xl hover:border-brand/30 transition-all duration-300 h-full w-full"
               >
                 {/* Cinta de washi tape cálida */}
                 <span
@@ -185,7 +185,7 @@ export function ProductsSection() {
                     <p className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-3 min-h-[48px]">{product.description}</p>
                   </div>
 
-                  <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded-full border border-[#e8dcc0] bg-[#fffbf0] px-3 py-1.5 text-[11px] font-semibold text-slate-800 self-center">
+                  <div className="mt-auto pt-3 inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded-full border border-[#e8dcc0] bg-[#fffbf0] px-3 py-1.5 text-[11px] font-semibold text-slate-800 self-center">
                     <TagIcon className="size-3.5 shrink-0 text-brand" aria-hidden />
                     <span className="text-slate-500 font-medium">{product.tag.label}:</span>
                     <span>{product.tag.value}</span>

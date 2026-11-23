@@ -1,122 +1,147 @@
 import bcrypt from 'bcryptjs';
-import { query } from '../config/db.js';
+import { pool, query } from '../config/db.js';
 import { generateToken } from '../utils/jwt.js';
+import { HttpError, badRequest, conflict } from '../utils/httpError.js';
+import { CONTRASENA_MIN } from '../config/negocio.js';
+import { validarFichaCliente } from '../utils/fichaCliente.js';
+import { armarPersona } from '../utils/persona.js';
+
+const SALT_ROUNDS = 10;
+const CORREO_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const texto = (valor) => (typeof valor === 'string' ? valor.trim() : '');
+
+/**
+ * Permisos activos del rol como { modulo: [acciones] }. La app los usa solo
+ * para mostrar u ocultar acciones; cada ruta sigue autorizando con
+ * authorize/protegerModulo.
+ */
+const permisosDelRol = async (idRol) => {
+  const res = await query(
+    `SELECT p.modulo, array_agg(p.accion ORDER BY p.accion) AS acciones
+     FROM rol_permiso rp
+     JOIN permiso p ON p.id_permiso = rp.id_permiso
+     WHERE rp.id_rol = $1 AND LOWER(p.estado) = 'activo'
+     GROUP BY p.modulo
+     ORDER BY p.modulo`,
+    [idRol]
+  );
+  return Object.fromEntries(res.rows.map((r) => [r.modulo, r.acciones]));
+};
+
+/** Arma la respuesta de sesión: token + datos públicos y permisos del usuario. */
+const crearSesion = async (user) => {
+  const payload = {
+    id_usuario: user.id_usuario,
+    nombre: user.nombre,
+    correo: user.correo,
+    id_rol: user.id_rol,
+    rol: user.rol_nombre,
+  };
+  return {
+    token: generateToken(payload),
+    usuario: {
+      ...payload,
+      estado: user.estado,
+      id_cliente: user.id_cliente || null,
+      permisos: await permisosDelRol(user.id_rol),
+    },
+  };
+};
 
 export class AuthService {
+  /** Login con correo y contraseña (CA-001-001). Solo bcrypt; sin claves demo. */
   static async login(correo, contrasena) {
-    try {
-      const res = await query(
-        'SELECT u.*, r.nombre AS rol_nombre FROM usuario u LEFT JOIN rol r ON u.id_rol = r.id_rol WHERE LOWER(u.correo) = LOWER($1)',
-        [correo.trim()]
-      );
-      let user = res.rows[0];
+    const res = await query(
+      `SELECT u.*, r.nombre AS rol_nombre, r.estado AS rol_estado, c.id_cliente
+       FROM usuario u
+       JOIN rol r ON u.id_rol = r.id_rol
+       LEFT JOIN cliente c ON c.id_usuario = u.id_usuario
+       WHERE LOWER(u.correo) = LOWER($1)`,
+      [texto(correo)]
+    );
+    const user = res.rows[0];
 
-      if (!user) {
-        // Fallback si no está en base de datos todavía
-        if (correo === 'admin@sistema.com' || correo === 'carlos.gomez@masarepas.com') {
-          user = {
-            id_usuario: 1,
-            nombre: 'Carlos Eduardo Gómez (Admin)',
-            correo,
-            id_rol: 1,
-            rol_nombre: 'Administrador',
-            estado: 'Activo',
-          };
-        } else {
-          throw new Error('Credenciales incorrectas: correo no encontrado');
-        }
-      }
-
-      // Validar estado activo
-      if (String(user.estado || '').toLowerCase() !== 'activo') {
-        throw new Error('El usuario se encuentra inactivo en el sistema');
-      }
-
-      // Validar contraseña si existe hash
-      if (user.contrasena_hash) {
-        let isValid = false;
-        try {
-          isValid = await bcrypt.compare(contrasena, user.contrasena_hash);
-        } catch (e) {
-          isValid = false;
-        }
-
-        // Si no coincide con bcrypt, chequear si está en texto plano
-        if (!isValid && user.contrasena_hash === contrasena) {
-          isValid = true;
-        }
-
-        // Permitir admin123 si es admin@sistema.com
-        if (!isValid && correo === 'admin@sistema.com' && contrasena === 'admin123') {
-          isValid = true;
-        }
-
-        if (!isValid) {
-          throw new Error('Contraseña incorrecta');
-        }
-      }
-
-      const token = generateToken({
-        id_usuario: user.id_usuario,
-        nombre: user.nombre,
-        correo: user.correo,
-        id_rol: user.id_rol,
-        rol: user.rol_nombre || 'Administrador',
-      });
-
-      return {
-        token,
-        usuario: {
-          id_usuario: user.id_usuario,
-          nombre: user.nombre,
-          correo: user.correo,
-          id_rol: user.id_rol,
-          rol: user.rol_nombre || 'Administrador',
-          estado: user.estado,
-        },
-      };
-    } catch (error) {
-      throw error;
+    // Mismo mensaje si el correo no existe o la contraseña no coincide.
+    const valida = user ? await bcrypt.compare(String(contrasena), user.contrasena_hash).catch(() => false) : false;
+    if (!valida) {
+      throw new HttpError(401, 'Correo o contraseña incorrectos');
     }
+    if (String(user.estado).toLowerCase() !== 'activo' || String(user.rol_estado).toLowerCase() !== 'activo') {
+      throw new HttpError(403, 'Tu cuenta está inactiva. Comunícate con CENAREPAS.');
+    }
+    return crearSesion(user);
   }
 
-  static async register({ nombre, correo, contrasena, id_rol = 1 }) {
+  /**
+   * Registro público de clientes (HU-150). Siempre asigna el rol Cliente,
+   * ignora cualquier id_rol recibido y crea usuario + cliente en una transacción.
+   */
+  static async registrarCliente(datos) {
+    const { valores, errores } = validarFichaCliente(datos);
+    const { nombre, tipoDocumento, documento, telefono, municipio, barrio, direccion } = valores;
+    // Tipo de persona y nombres o razón social (Jurídica si el documento es NIT).
+    const { valores: persona } = armarPersona({ nombre }, {}, { tipoDocumento });
+    const correo = texto(datos.correo).toLowerCase();
+    const contrasena = typeof datos.contrasena === 'string' ? datos.contrasena : '';
+
+    if (!CORREO_REGEX.test(correo)) errores.correo = 'Ingresa un correo válido';
+    if (contrasena.length < CONTRASENA_MIN) errores.contrasena = `La contraseña debe tener al menos ${CONTRASENA_MIN} caracteres`;
+    if (Object.keys(errores).length > 0) {
+      throw badRequest('Revisa los datos del registro', errores);
+    }
+
+    const client = await pool.connect();
     try {
-      const existing = await query('SELECT id_usuario FROM usuario WHERE LOWER(correo) = LOWER($1)', [correo.trim()]);
-      if (existing && existing.rows && existing.rows.length > 0) {
-        throw new Error('Ya existe un usuario registrado con este correo');
+      await client.query('BEGIN');
+
+      const duplicadoCorreo = await client.query(
+        `SELECT 1 FROM usuario WHERE LOWER(correo) = $1
+         UNION ALL SELECT 1 FROM cliente WHERE LOWER(correo) = $1`,
+        [correo]
+      );
+      if (duplicadoCorreo.rows.length > 0) {
+        throw conflict('Ya existe una cuenta registrada con ese correo');
+      }
+      const duplicadoDocumento = await client.query('SELECT 1 FROM cliente WHERE documento = $1', [documento]);
+      if (duplicadoDocumento.rows.length > 0) {
+        throw conflict('Ya existe un cliente registrado con ese número de documento');
       }
 
-      const hash = await bcrypt.hash(contrasena, 10);
+      const rol = await client.query(`SELECT id_rol, nombre FROM rol WHERE nombre = 'Cliente' AND estado = 'Activo'`);
+      if (rol.rows.length === 0) {
+        throw new HttpError(500, 'El rol Cliente no está configurado');
+      }
 
-      const res = await query(
+      const hash = await bcrypt.hash(contrasena, SALT_ROUNDS);
+      const usuario = await client.query(
         `INSERT INTO usuario (nombre, correo, contrasena_hash, id_rol, estado)
          VALUES ($1, $2, $3, $4, 'Activo')
-         RETURNING id_usuario, nombre, correo, id_rol, estado, fecha_creacion`,
-        [nombre, correo.trim(), hash, id_rol]
+         RETURNING id_usuario, nombre, correo, id_rol, estado`,
+        [nombre, correo, hash, rol.rows[0].id_rol]
+      );
+      const nuevoUsuario = usuario.rows[0];
+
+      const cliente = await client.query(
+        `INSERT INTO cliente (nombre, tipo_documento, documento, telefono, correo, direccion, municipio, barrio, estado, id_usuario,
+                              tipo_persona, nombres, apellidos, razon_social)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Activo', $9, $10, $11, $12, $13)
+         RETURNING id_cliente`,
+        [nombre, tipoDocumento, documento, telefono, correo, direccion, municipio, barrio, nuevoUsuario.id_usuario,
+          persona.tipo_persona, persona.nombres, persona.apellidos, persona.razon_social]
       );
 
-      const newUser = res.rows[0];
-      const token = generateToken({
-        id_usuario: newUser.id_usuario,
-        nombre: newUser.nombre,
-        correo: newUser.correo,
-        id_rol: newUser.id_rol,
+      await client.query('COMMIT');
+      return crearSesion({
+        ...nuevoUsuario,
+        rol_nombre: rol.rows[0].nombre,
+        id_cliente: cliente.rows[0].id_cliente,
       });
-
-      return { token, usuario: newUser };
     } catch (error) {
-      // Fallback en memoria si DB aún no migrada
-      const fallbackUser = {
-        id_usuario: Date.now(),
-        nombre,
-        correo,
-        id_rol: id_rol || 1,
-        estado: 'Activo',
-        fecha_creacion: new Date().toISOString(),
-      };
-      const token = generateToken(fallbackUser);
-      return { token, usuario: fallbackUser };
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
   }
 }

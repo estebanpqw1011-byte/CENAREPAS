@@ -42,13 +42,13 @@ export const ADVANTAGES = [
     'Atención personalizada',
 ];
 export const PROCESS = [
-    { icon: '🌽', label: 'Seleccionamos\nmejores\ningredientes' },
-    { icon: '👐', label: 'Preparación\ncuidadosa' },
-    { icon: '🔥', label: 'Cocción\nperfecta' },
-    { icon: '📦', label: 'Entrega rápida\ny segura' },
+    { icon: 'Sparkles', label: 'Seleccionamos\nmejores\ningredientes' },
+    { icon: 'ChefHat', label: 'Preparación\ncuidadosa' },
+    { icon: 'Flame', label: 'Cocción\nperfecta' },
+    { icon: 'Package', label: 'Entrega rápida\ny segura' },
 ];
 export const ABOUT_CARDS = [
-    { icon: '🏭', title: 'Producción', sub: 'diaria' },
-    { icon: '🏆', title: 'Calidad', sub: 'garantizada' },
-    { icon: '🚚', title: 'Entrega', sub: 'rápida' },
+    { icon: 'Factory', title: 'Producción', sub: 'diaria' },
+    { icon: 'Award', title: 'Calidad', sub: 'garantizada' },
+    { icon: 'Truck', title: 'Entrega', sub: 'rápida' },
 ];

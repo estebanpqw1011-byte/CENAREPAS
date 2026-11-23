@@ -1,26 +1,40 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useConfiguracion } from '../../../shared/contexts/ConfiguracionContext';
 import defaultBasketImage from '../assets/arepas-basket.png';
+import defaultVideoPoster from '../assets/hero-kneading-poster.webp';
 
 export function HeroSection() {
   const { nombreProyecto, bannerImages, heroVideoUrl } = useConfiguracion();
+  const videoRef = useRef(null);
 
   const showVideo = Boolean(heroVideoUrl);
-  const posterImage = bannerImages && bannerImages.length > 0 ? bannerImages[0].url : defaultBasketImage;
+  const fallbackImage = bannerImages && bannerImages.length > 0 ? bannerImages[0].url : defaultBasketImage;
+
+  useEffect(() => {
+    if (showVideo && videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {});
+      }
+    }
+  }, [showVideo, heroVideoUrl]);
 
   return (
     <section
       id="inicio"
       className="relative w-full min-h-screen flex flex-col justify-end overflow-hidden bg-[var(--landing-cine)]"
     >
-      <div className="absolute inset-0 w-full h-full overflow-hidden">
+      <div className="absolute inset-0 w-full h-full overflow-hidden bg-[var(--landing-cine)]">
         {showVideo ? (
           <video
+            ref={videoRef}
             key={heroVideoUrl}
             src={heroVideoUrl}
-            poster={posterImage}
+            poster={defaultVideoPoster}
             autoPlay
             muted
             loop
@@ -30,7 +44,7 @@ export function HeroSection() {
           />
         ) : (
           <img
-            src={posterImage}
+            src={fallbackImage}
             alt={nombreProyecto}
             className="w-full h-full object-cover scale-[1.02]"
           />

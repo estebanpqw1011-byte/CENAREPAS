@@ -33,7 +33,7 @@ export class FichasTecnicasService {
   }
 
   static async create(data) {
-    const { nombre, descripcion, instrucciones_preparacion, tiempo_estimado_minutos, rendimiento_lote, estado = 'activo', insumos = [] } = data;
+    const { nombre, descripcion, instrucciones_preparacion, tiempo_estimado_minutos, rendimiento_lote, estado = 'Activo', insumos = [] } = data;
     if (!Array.isArray(insumos)) {
       const error = new Error('La lista de insumos de la ficha no es válida');
       error.statusCode = 400;
@@ -126,7 +126,10 @@ export class FichasTecnicasService {
   }
 
   static async delete(id) {
-    const res = await pool.query('DELETE FROM ficha_tecnica WHERE id_ficha = $1 RETURNING id_ficha', [id]);
+    const res = await pool.query(
+      `UPDATE ficha_tecnica SET estado = 'Inactivo' WHERE id_ficha = $1 RETURNING id_ficha`,
+      [id]
+    );
     return res.rowCount > 0;
   }
 }

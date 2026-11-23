@@ -33,8 +33,9 @@ export class ProveedoresController {
 
   static async delete(req, res, next) {
     try {
-      await ProveedoresService.delete(req.params.id);
-      return successResponse(res, null, 'Proveedor eliminado exitosamente');
+      const ok = await ProveedoresService.delete(req.params.id);
+      if (!ok) return errorResponse(res, 'Proveedor no encontrado', 404);
+      return successResponse(res, null, 'Proveedor inactivado exitosamente');
     } catch (e) { next(e); }
   }
 }

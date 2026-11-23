@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getInsumos, createInsumo, updateInsumo, deleteInsumo } from '../services/insumosService';
+import { getInsumos, createInsumo, updateInsumo, deleteInsumo, cambiarEstadoInsumo } from '../services/insumosService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useInsumos() {
@@ -10,13 +10,27 @@ export function useInsumos() {
   const [showModal, setShowModal] = useState(false);
   const [detailModal, setDetailModal] = useState({ isOpen: false, data: null });
   const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, id: null, nombre: '' });
+  const [statusDialog, setStatusDialog] = useState({ isOpen: false, insumo: null, nextEstado: 'Activo' });
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  const fetchInsumos = () => {
+    setIsLoading(true);
+    setLoadError(null);
+    return getInsumos()
+      .then((data) => setInsumos(Array.isArray(data) ? data : []))
+      .catch((error) => {
+        setInsumos([]);
+        setLoadError(error?.message || 'No se pudieron cargar los insumos');
+      })
+      .finally(() => setIsLoading(false));
+  };
 
   useEffect(() => {
-    getInsumos()
-      .then((data) => setInsumos(Array.isArray(data) ? data : []))
-      .catch(() => setInsumos([]));
+    fetchInsumos();
   }, []);
 
   const filteredInsumos = useMemo(() => {
@@ -50,7 +64,7 @@ export function useInsumos() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar el insumo');
+      toast.error(error?.data?.message || 'No se pudo guardar el insumo');
     } finally {
       setIsSaving(false);
     }
@@ -71,6 +85,39 @@ export function useInsumos() {
     }
   };
 
+  const handleRequestStatusChange = (insumo) => {
+    if (!insumo) return;
+    const isCurrentlyActive = String(insumo.estado || '').toLowerCase() === 'activo' || String(insumo.estado || '').toLowerCase() === 'disponible';
+    const nextEstado = isCurrentlyActive ? 'Inactivo' : 'Activo';
+    setStatusDialog({
+      isOpen: true,
+      insumo,
+      nextEstado,
+    });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!statusDialog.insumo) return;
+    setIsUpdatingStatus(true);
+    try {
+      const { id_insumo, nombre } = statusDialog.insumo;
+      const actualizado = await cambiarEstadoInsumo(id_insumo, statusDialog.nextEstado);
+
+      setInsumos((prev) =>
+        prev.map((i) =>
+          i.id_insumo === id_insumo ? { ...i, estado: actualizado?.estado || statusDialog.nextEstado } : i
+        )
+      );
+
+      toast.success(`Estado del insumo "${nombre}" cambiado a ${statusDialog.nextEstado}`);
+      setStatusDialog({ isOpen: false, insumo: null, nextEstado: 'Activo' });
+    } catch (error) {
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado del insumo');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   return {
     insumos: filteredInsumos,
     rawInsumos: insumos,
@@ -86,9 +133,17 @@ export function useInsumos() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
+    isLoading,
+    loadError,
+    refetch: fetchInsumos,
     handleSave,
     handleDelete,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   };
 }

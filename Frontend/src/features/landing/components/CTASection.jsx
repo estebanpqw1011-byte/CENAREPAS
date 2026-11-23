@@ -5,7 +5,7 @@ import { SectionTransition } from './SectionTransition';
 
 export function CTASection() {
   return (
-    <section className="relative py-20 sm:py-28 bg-[#fffbf0] text-slate-900 overflow-hidden">
+    <section className="relative py-20 sm:py-24 bg-[#fffbf0] text-slate-900 overflow-hidden">
       <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         
         {/* Tarjeta Cinematográfica Principal (Flotante Tech sobre Fondo Claro) */}

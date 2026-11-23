@@ -1,0 +1,297 @@
+{
+  "_leeme": "Descripciones de negocio del diccionario y dominios de los diagramas. La estructura (tipos, nulos, valores por defecto, restricciones, índices y llaves foráneas) NO va aquí: la lee generar_documentacion.js de la base. Las llaves primarias y foráneas sin descripción reciben una automática; cualquier otra columna sin descripción, o una descripción de una tabla o columna que no existe, hace fallar el generador.",
+  "dominios": [
+    { "clave": "seguridad", "titulo": "Seguridad", "tablas": ["rol", "permiso", "rol_permiso", "usuario", "auditoria"] },
+    { "clave": "sedes_terceros", "titulo": "Sedes y terceros", "tablas": ["sede", "cliente", "proveedor"] },
+    { "clave": "catalogo_recetas", "titulo": "Catálogo y recetas", "tablas": ["categoria_producto", "producto", "ficha_tecnica", "ficha_tecnica_insumo", "insumo"] },
+    { "clave": "produccion_compras", "titulo": "Producción y compras", "tablas": ["compra", "detalle_compra", "lote_produccion", "lote_produccion_insumo"] },
+    { "clave": "comercial_creditos", "titulo": "Comercial y créditos", "tablas": ["pedido", "detalle_pedido", "pedido_estado_historial", "credito", "abono", "notificacion", "venta", "detalle_venta"] }
+  ],
+  "tablas": {
+    "rol": {
+      "descripcion": "Roles del sistema: Administrador, Secretaria, Vendedor, Domiciliario y Cliente (HU-005 a HU-012). El backend busca el rol Cliente por nombre, no por id.",
+      "columnas": {
+        "nombre": "Nombre del rol (único).",
+        "descripcion": "Descripción del rol.",
+        "estado": "Activo o Inactivo.",
+        "fecha_creacion": "Momento en que se creó el rol."
+      }
+    },
+    "permiso": {
+      "descripcion": "Acciones por módulo que se asignan a los roles: 16 módulos por 7 acciones (CA-012).",
+      "columnas": {
+        "modulo": "Módulo (abonos, categorias, clientes, compras, configuracion, dashboard, fichas-tecnicas, insumos, pedidos, produccion, productos, proveedores, roles, sedes, usuarios, ventas).",
+        "accion": "Acción: ver, crear, editar, eliminar, cambiar_estado, exportar o anular.",
+        "estado": "Activo o Inactivo. El login solo entrega los permisos activos."
+      }
+    },
+    "rol_permiso": {
+      "descripcion": "Permisos de cada rol (HU-012). Administrador 112, Secretaria 78, Vendedor 22.",
+      "columnas": {}
+    },
+    "usuario": {
+      "descripcion": "Cuentas de acceso: personal (Administrador, Secretaria, Vendedor, Domiciliario) y clientes registrados en la app (HU-013 a HU-024).",
+      "columnas": {
+        "nombre": "Nombre de la persona.",
+        "correo": "Correo de acceso. Único sin distinguir mayúsculas (uq_usuario_correo y ux_usuario_correo_lower).",
+        "contrasena_hash": "Hash bcrypt de la contraseña (10 rondas). Contraseñas nuevas o cambiadas: mínimo 8 caracteres (lo valida el backend).",
+        "estado": "Activo o Inactivo. Un usuario inactivo no puede iniciar sesión.",
+        "token_recuperacion": "HMAC del código de recuperación de 6 dígitos (nunca el código). NULL si no hay código vigente.",
+        "token_expiracion": "Vencimiento del código de recuperación (15 minutos después de pedirlo).",
+        "fecha_creacion": "Momento en que se creó la cuenta.",
+        "recuperacion_intentos": "Intentos fallidos con el código vigente; al 5.º el código se invalida (migración 011)."
+      }
+    },
+    "auditoria": {
+      "descripcion": "Bitácora de eventos. Existe en la base y GET /auditoria la lee, pero el backend actual no escribe en ella (AuditoriaService no tiene llamadas que inserten).",
+      "columnas": {
+        "id_usuario": "Usuario que hizo la acción.",
+        "tabla_afectada": "Tabla del registro afectado.",
+        "id_registro_afectado": "Id del registro afectado.",
+        "accion": "INSERT, UPDATE, DELETE, ANULACION o CAMBIO_ESTADO.",
+        "detalle": "Detalle del evento en texto libre.",
+        "fecha_evento": "Momento del evento."
+      }
+    },
+    "sede": {
+      "descripcion": "Sedes de la empresa. Los pedidos del cliente de la app van a la sede por defecto (SEDE_PEDIDOS_CLIENTE en negocio.js, hoy Aranjuez).",
+      "columnas": {
+        "nombre": "Nombre de la sede (único).",
+        "direccion": "Dirección.",
+        "telefono": "Teléfono de contacto.",
+        "horario_atencion": "Horario de atención en texto.",
+        "responsable": "Persona responsable de la sede, en texto.",
+        "estado": "Activo o Inactivo. No se pueden registrar pedidos en una sede inactiva."
+      }
+    },
+    "cliente": {
+      "descripcion": "Clientes (HU-099 a HU-105). Los registra el personal o se registran en la app (HU-150); en ese caso tienen cuenta de usuario con rol Cliente.",
+      "columnas": {
+        "nombre": "Nombre o razón social.",
+        "documento": "Número de documento (único).",
+        "telefono": "Teléfono (también se usa para WhatsApp).",
+        "correo": "Correo (opcional). Único sin distinguir mayúsculas (ux_cliente_correo_lower).",
+        "direccion": "Dirección.",
+        "estado": "Activo o Inactivo. Un cliente inactivo no puede hacer pedidos.",
+        "fecha_creacion": "Momento del registro.",
+        "id_usuario": "Cuenta del cliente que se registró en la app; NULL si lo registró el personal. Una cuenta por cliente (uq_cliente_usuario).",
+        "tipo_documento": "CC, CE, NIT, PP o TI (por defecto CC).",
+        "municipio": "Municipio en texto (lista del Área Metropolitana en el backend y en la app; sin catálogo en la base: deuda técnica).",
+        "barrio": "Barrio en texto."
+      }
+    },
+    "proveedor": {
+      "descripcion": "Proveedores de insumos (HU-025 a HU-033). Solo se inactivan; con compras asociadas la base impide borrarlos.",
+      "columnas": {
+        "nombre": "Nombre o razón social.",
+        "nit": "NIT (único).",
+        "telefono": "Teléfono.",
+        "correo": "Correo.",
+        "direccion": "Dirección.",
+        "estado": "Activo o Inactivo.",
+        "fecha_creacion": "Momento del registro."
+      }
+    },
+    "categoria_producto": {
+      "descripcion": "Categorías del catálogo (HU-045 a HU-054).",
+      "columnas": {
+        "nombre": "Nombre (único).",
+        "descripcion": "Descripción.",
+        "estado": "Activo o Inactivo. Los productos de una categoría inactiva no se pueden pedir.",
+        "imagen_url": "Ruta de la imagen (migración 006). Opcional."
+      }
+    },
+    "producto": {
+      "descripcion": "Productos del catálogo (HU-088 a HU-098).",
+      "columnas": {
+        "nombre": "Nombre (único).",
+        "descripcion": "Descripción.",
+        "id_ficha": "Ficha técnica (receta) del producto. La base la permite vacía; CA-088-002 pide que sea obligatoria (pendiente del equipo).",
+        "id_proveedor": "Proveedor del producto (opcional).",
+        "precio_venta": "Precio de venta. El pedido copia este precio al detalle al momento de pedir.",
+        "imagen_url": "Ruta de la imagen (opcional).",
+        "stock_actual": "Existencia. Entregar un pedido la descuenta y anular un pedido entregado la repone; los lotes de producción no la suman.",
+        "stock_minimo": "Umbral de la alerta de stock bajo.",
+        "fecha_vencimiento": "Vencimiento. Un producto vencido no se puede pedir.",
+        "estado": "Activo o Inactivo. Un producto inactivo no se puede pedir."
+      }
+    },
+    "ficha_tecnica": {
+      "descripcion": "Receta de un producto (HU-055 a HU-066). El Vendedor y la Secretaria solo la consultan (migración 007).",
+      "columnas": {
+        "nombre": "Nombre (único).",
+        "descripcion": "Descripción.",
+        "instrucciones_preparacion": "Pasos de preparación.",
+        "tiempo_estimado_minutos": "Tiempo de preparación en minutos (mayor que 0).",
+        "rendimiento_lote": "Unidades que rinde la receta (mayor que 0). Las cantidades de sus insumos son para este rendimiento.",
+        "estado": "Activo o Inactivo."
+      }
+    },
+    "ficha_tecnica_insumo": {
+      "descripcion": "Insumos de una receta y sus cantidades, sin repetir insumo (HU-061, HU-062).",
+      "columnas": {
+        "cantidad": "Cantidad del insumo para el rendimiento de la ficha (mayor que 0).",
+        "unidad_medida": "Unidad de la cantidad."
+      }
+    },
+    "insumo": {
+      "descripcion": "Materias primas y empaques (HU-067 a HU-077).",
+      "columnas": {
+        "nombre": "Nombre (único).",
+        "unidad_medida": "Unidad de medida (Kg, Litro, Paquete…).",
+        "stock_actual": "Existencia registrada. El backend no la cambia con las compras ni con los lotes de producción (pendiente del equipo).",
+        "stock_minimo": "Umbral de la alerta de stock bajo.",
+        "fecha_vencimiento": "Vencimiento (opcional).",
+        "id_proveedor": "Proveedor habitual (opcional).",
+        "estado": "Activo o Inactivo."
+      }
+    },
+    "compra": {
+      "descripcion": "Compras de insumos a proveedores (HU-034 a HU-044). No se eliminan: se anulan (CA-039-001). Hoy no suman al stock de los insumos.",
+      "columnas": {
+        "id_usuario": "Usuario que registró la compra.",
+        "fecha_compra": "Día de la compra.",
+        "valor_total": "Total de la compra (lo envía quien la registra).",
+        "medio_pago": "Efectivo, Transferencia, Credito o Tarjeta.",
+        "comprobante_url": "Factura en PDF o imagen (opcional).",
+        "estado": "Registrada o Anulada.",
+        "fecha_registro": "Momento del registro."
+      }
+    },
+    "detalle_compra": {
+      "descripcion": "Insumos y cantidades de cada compra, sin repetir insumo.",
+      "columnas": {
+        "cantidad": "Cantidad comprada (mayor que 0).",
+        "valor_unitario": "Valor por unidad.",
+        "subtotal": "cantidad por valor_unitario (lo envía quien registra la compra)."
+      }
+    },
+    "lote_produccion": {
+      "descripcion": "Lote de producción de una receta (HU-078 a HU-087).",
+      "columnas": {
+        "id_usuario_responsable": "Usuario responsable del lote.",
+        "fecha_produccion": "Día de producción.",
+        "cantidad_producida": "Unidades producidas (mayor que 0).",
+        "estado": "En proceso, Terminado o Anulado.",
+        "observaciones": "Observaciones."
+      }
+    },
+    "lote_produccion_insumo": {
+      "descripcion": "Insumos consumidos por un lote. Se guardan al crear el lote y se reemplazan al editarlo; hoy no descuentan el stock de los insumos.",
+      "columnas": {
+        "cantidad_consumida": "Cantidad consumida (mayor que 0). La envía quien registra el lote."
+      }
+    },
+    "pedido": {
+      "descripcion": "Pedido (HU-106 a HU-120). Un pedido Entregado es una venta (fusión de pedidos y ventas). No se elimina: se anula con motivo.",
+      "columnas": {
+        "id_sede": "Sede que atiende el pedido.",
+        "id_usuario": "Usuario que registró el pedido (personal o cliente de la app).",
+        "fecha_pedido": "Momento en que se registró.",
+        "fecha_entrega": "Día de entrega.",
+        "valor_total": "Suma de los subtotales del detalle. La calcula siempre el backend; el costo de envío está desactivado.",
+        "estado": "Pendiente, En proceso, Entregado o Anulado (transiciones en TRANSICIONES_PEDIDO de negocio.js).",
+        "observaciones": "Observaciones.",
+        "motivo_anulacion": "Motivo de la anulación (también queda en el historial).",
+        "medio_pago": "Efectivo, Tarjeta o Transferencia. Puede ser NULL en pedidos anteriores a la migración 002.",
+        "comprobante_url": "Comprobante de la transferencia del checkout del cliente. El pedido del personal no lo guarda.",
+        "direccion_entrega": "Dirección de entrega.",
+        "municipio_entrega": "Municipio de entrega (solo lo llena el checkout del cliente).",
+        "barrio_entrega": "Barrio de entrega (solo lo llena el checkout del cliente).",
+        "complemento_entrega": "Apartamento, torre u otro complemento (checkout del cliente).",
+        "indicaciones_entrega": "Indicaciones para la entrega (checkout del cliente).",
+        "origen": "personal (lo registró el personal) o app (checkout del cliente).",
+        "fecha_entregado": "Momento de la entrega (igual a la fecha de su fila Entregado en el historial).",
+        "fecha_anulacion": "Momento de la anulación.",
+        "stock_descontado": "TRUE mientras el pedido entregado tiene el stock descontado; al anularlo se repone y vuelve a FALSE.",
+        "id_venta_origen": "Venta antigua de la que salió el pedido en la migración 002; NULL en los pedidos nuevos."
+      }
+    },
+    "detalle_pedido": {
+      "descripcion": "Productos de cada pedido, sin repetir producto (HU-112 a HU-116).",
+      "columnas": {
+        "cantidad": "Unidades pedidas (entero mayor o igual a 1).",
+        "precio_unitario": "Precio de venta del producto al momento de pedir (lo toma el backend).",
+        "subtotal": "cantidad por precio_unitario (lo calcula el backend)."
+      }
+    },
+    "pedido_estado_historial": {
+      "descripcion": "Historial de estados del pedido (migración 010; HU-109, CA-111-002). Una fila al crear el pedido y otra en cada cambio de estado, en la misma transacción.",
+      "columnas": {
+        "estado_anterior": "Estado antes del cambio; NULL en la fila de creación.",
+        "estado_nuevo": "Estado después del cambio.",
+        "id_usuario": "Usuario que hizo el cambio.",
+        "motivo": "Motivo; solo se guarda en las anulaciones.",
+        "fecha_cambio": "Momento del cambio.",
+        "reconstruido": "TRUE en las filas que la migración 010 reconstruyó para los pedidos anteriores (solo con fechas conocidas)."
+      }
+    },
+    "credito": {
+      "descripcion": "Cuenta por cobrar de un pedido, una por pedido. Se crea con el primer abono: un pedido sin abonos no tiene crédito.",
+      "columnas": {
+        "id_pedido": "Pedido del crédito (único).",
+        "id_cliente": "Cliente del pedido.",
+        "valor_total": "Total del pedido; se actualiza si el pedido cambia.",
+        "valor_abonado": "Suma de los abonos aprobados.",
+        "saldo_pendiente": "valor_total menos valor_abonado.",
+        "estado": "Activo (con saldo), Pagado (saldo 0) o Anulado (el pedido se anuló). De aquí sale la insignia Pagado / Con saldo del pedido.",
+        "fecha_creacion": "Momento del primer abono (misma transacción)."
+      }
+    },
+    "abono": {
+      "descripcion": "Pago sobre el crédito de un pedido (HU-117, HU-167, HU-171). El del personal queda Aprobado; el del cliente queda En revisión hasta que el personal lo aprueba o lo rechaza.",
+      "columnas": {
+        "id_cliente": "Cliente que paga (el del pedido).",
+        "id_pedido": "Pedido al que se abona. Obligatorio si no hay id_venta (ck_abono_referencia).",
+        "id_venta": "Venta antigua a la que se abonó (datos anteriores a la fusión). El backend actual no la llena.",
+        "fecha_abono": "Día del pago. El personal puede elegirla: no futura, no anterior al pedido y no de hace más de 7 días (ABONO_DIAS_ATRAS_MAX); sin fecha, hoy.",
+        "valor_abonado": "Valor de este abono (mayor que 0).",
+        "saldo_pendiente": "Saldo del crédito después de este abono.",
+        "medio_pago": "Efectivo, Tarjeta o Transferencia. El CHECK también acepta Credito (valor antiguo) que el backend ya no usa.",
+        "comprobante_url": "Comprobante subido (/api/v1/comprobantes/<archivo>: JPG, PNG o PDF de máximo 5 MB). Obligatorio con Transferencia (lo exige el backend).",
+        "estado": "En revisión, Aprobado, Rechazado o Anulado. Solo los aprobados cuentan en el crédito.",
+        "id_credito": "Crédito del pedido. NULL solo en abonos anteriores a la migración 004.",
+        "fecha_registro": "Momento en que se guardó.",
+        "id_usuario_registra": "Usuario que lo registró (personal o cliente).",
+        "id_usuario_revisa": "Usuario que lo aprobó, rechazó o anuló. En los abonos del personal es el mismo que lo registró.",
+        "fecha_revision": "Momento de la aprobación, el rechazo o la anulación.",
+        "motivo_rechazo": "Motivo del rechazo (también cuando se anula el pedido con abonos en revisión).",
+        "motivo_anulacion": "Motivo de la anulación del abono."
+      }
+    },
+    "notificacion": {
+      "descripcion": "Avisos para el cliente de la app (HU-168, HU-169). Solo se crean si el cliente del pedido tiene cuenta de usuario.",
+      "columnas": {
+        "id_usuario": "Destinatario.",
+        "id_pedido": "Pedido del aviso.",
+        "id_abono": "Abono del aviso.",
+        "tipo": "pedido_creado, pedido_estado, abono_aprobado o abono_rechazado.",
+        "titulo": "Título.",
+        "mensaje": "Mensaje.",
+        "leida": "Si el cliente ya la leyó.",
+        "fecha_creacion": "Momento en que se creó.",
+        "fecha_lectura": "Momento en que se leyó."
+      }
+    },
+    "venta": {
+      "descripcion": "Ventas antiguas (histórica). Tras la fusión, una venta es un pedido Entregado; el backend ya no crea ventas (solo seed.js, que no se ejecuta).",
+      "columnas": {
+        "id_usuario": "Usuario que registró la venta.",
+        "id_pedido": "Pedido al que estaba ligada la venta.",
+        "fecha_venta": "Momento de la venta.",
+        "valor_total": "Total de la venta.",
+        "medio_pago": "Efectivo, Transferencia, Credito o Tarjeta.",
+        "comprobante_url": "Comprobante (opcional).",
+        "estado": "Pendiente, Pagada o Anulada."
+      }
+    },
+    "detalle_venta": {
+      "descripcion": "Productos de las ventas antiguas (histórica).",
+      "columnas": {
+        "cantidad": "Unidades vendidas.",
+        "precio_unitario": "Precio por unidad.",
+        "subtotal": "cantidad por precio_unitario."
+      }
+    }
+  }
+}

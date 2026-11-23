@@ -33,8 +33,9 @@ export class InsumosController {
 
   static async delete(req, res, next) {
     try {
-      await InsumosService.delete(req.params.id);
-      return successResponse(res, null, 'Insumo eliminado exitosamente');
+      const ok = await InsumosService.delete(req.params.id);
+      if (!ok) return errorResponse(res, 'Insumo no encontrado', 404);
+      return successResponse(res, null, 'Insumo inactivado exitosamente');
     } catch (e) { next(e); }
   }
 }

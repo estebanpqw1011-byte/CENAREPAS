@@ -1,39 +1,45 @@
 import { useState, useMemo, useEffect } from 'react';
 import { DollarSign, BarChart3, TrendingUp, ShoppingBag } from 'lucide-react';
-import { useVentas } from '../hooks/useVentas';
+import { useVentas, esVentaAnulada } from '../hooks/useVentas';
+import { useAnularVenta } from '../hooks/useAnularVenta';
+import ComprobanteVentaButton from '../components/ComprobanteVentaButton';
+import AnularVentaButton from '../components/AnularVentaButton';
+import AnularVentaModal from '../components/AnularVentaModal';
 import { getClientes } from '../../clientes/services/clientesService';
 import { getUsuarios } from '../../usuarios/services/usuariosService';
 import { DataTable } from '../../../shared/components/DataTable';
 import { RowActions } from '../../../shared/components/RowActions';
-import { VentaFormModal } from '../components/VentaFormModal';
-import ConfirmDialog from '../../../shared/components/ConfirmDialog';
 import DetailModal from '../../../shared/components/DetailModal';
 import PageHeader from '../../../shared/components/PageHeader';
 import { MetricCard } from '../../../shared/components/MetricCard';
-import { usePermissions } from '../../../shared/contexts/PermissionContext';
-import StatusSwitch from '../../../shared/components/StatusSwitch';
+import EstadoBadge from '../../../shared/ui/EstadoBadge';
 import { CustomSelect } from '../../../shared/components/CustomSelect';
+import ErrorBanner from '../../../shared/components/ErrorBanner';
+import { exportToPdf } from '../../../shared/utils/exportToPdf';
+import { exportToExcel } from '../../../shared/utils/exportToExcel';
+
+// La columna Estado siempre va de última, aunque se agreguen columnas nuevas.
+const conEstadoAlFinal = (columns) => [
+  ...columns.filter((c) => c.key !== 'estado'),
+  ...columns.filter((c) => c.key === 'estado'),
+];
 
 export default function VentasPage() {
-  const { can } = usePermissions();
   const {
     rawVentas,
     searchQuery,
     setSearchQuery,
     estadoFilter,
     setEstadoFilter,
-    showModal,
-    setShowModal,
     detailModal,
     setDetailModal,
-    deleteDialog,
-    setDeleteDialog,
-    isDeleting,
-    isSaving,
-    handleSave,
-    handleAnular,
+    isLoading,
+    loadError,
+    refetch,
+    mostrarAnuladas,
+    setMostrarAnuladas,
   } = useVentas();
-  const [selectedVenta, setSelectedVenta] = useState(null);
+  const anulacion = useAnularVenta(refetch);
   const [clientes, setClientes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
 
@@ -56,15 +62,18 @@ export default function VentasPage() {
   );
 
 
-  const totalVentas = rawVentas.length;
+  // Las tarjetas no cuentan las ventas anuladas (su dinero ya no es una venta).
+  const vigentes = useMemo(() => rawVentas.filter((v) => !esVentaAnulada(v)), [rawVentas]);
+  const totalVentas = vigentes.length;
   const ventasHoy = useMemo(
-    () => rawVentas.reduce((acc, v) => acc + (Number(v.valor_total) || 0), 0),
-    [rawVentas]
+    () => vigentes.reduce((acc, v) => acc + (Number(v.valor_total) || 0), 0),
+    [vigentes]
   );
   const promedioVentas = totalVentas > 0 ? ventasHoy / totalVentas : 0;
 
   const filteredData = useMemo(() => {
     return rawVentas.filter((v) => {
+      if (!mostrarAnuladas && esVentaAnulada(v)) return false;
       const q = (searchQuery || '').toLowerCase().trim();
       const clienteNombre = (clientesNames[v.id_cliente] || '').toLowerCase();
       const usuarioNombre = (usuariosNames[v.id_usuario] || '').toLowerCase();
@@ -80,10 +89,10 @@ export default function VentasPage() {
       const matchesEstado = isTodosEstado || String(v.estado).toLowerCase() === String(estadoFilter).toLowerCase();
       return matchesSearch && matchesEstado;
     });
-  }, [rawVentas, searchQuery, estadoFilter, clientesNames, usuariosNames]);
+  }, [rawVentas, searchQuery, estadoFilter, clientesNames, usuariosNames, mostrarAnuladas]);
 
   const columns = useMemo(
-    () => [
+    () => conEstadoAlFinal([
       {
         key: 'id_venta',
         label: 'ID',
@@ -130,79 +139,134 @@ export default function VentasPage() {
         key: 'estado',
         label: 'Estado',
         render: (value) => (
-          <StatusSwitch value={value} activeValue="completada" inactiveValue="anulada" />
+          <EstadoBadge
+            value={value}
+            statusMap={{
+              pendiente: { label: 'Pendiente', color: 'warning' },
+              pagada: { label: 'Pagada', color: 'success' },
+              anulada: { label: 'Anulada', color: 'destructive' },
+            }}
+          />
         ),
       },
       {
         key: 'acciones',
         label: 'Acciones',
         render: (_, venta) => (
+          // Solo lectura: Ver detalle y, si no está anulada, Anular venta (dentro del plazo).
           <RowActions
             onView={() => setDetailModal({ isOpen: true, data: venta })}
-            onEdit={() => {
-              setSelectedVenta(venta);
-              setShowModal(true);
-            }}
-            editDisabled={!can('ventas', 'editar')}
-            onDelete={() =>
-              setDeleteDialog({
-                isOpen: true,
-                id: venta.id_venta,
-                nombre: `Venta #${venta.id_venta}`,
-              })
-            }
-            deleteDisabled={!can('ventas', 'eliminar') || String(venta.estado).toLowerCase() === 'anulada'}
-            deleteTitle="Anular Venta"
+            extra={esVentaAnulada(venta) ? null : <AnularVentaButton venta={venta} onAnular={anulacion.abrir} />}
           />
         ),
       },
-    ],
-    [can, clientesNames, usuariosNames, setDetailModal, setShowModal, setDeleteDialog]
+    ]),
+    [clientesNames, usuariosNames, setDetailModal, anulacion.abrir]
   );
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      data: filteredData,
+      columns: [
+        { header: 'ID', key: 'id_venta' },
+        {
+          header: 'Cliente',
+          accessor: (v) => v.cliente_nombre || clientesNames[v.id_cliente] || `Cliente #${v.id_cliente}`,
+        },
+        {
+          header: 'Fecha Venta',
+          accessor: (v) => (v.fecha_venta ? new Date(v.fecha_venta).toLocaleDateString('es-CO') : 'N/A'),
+        },
+        { header: 'Medio de Pago', key: 'medio_pago' },
+        {
+          header: 'Valor Total',
+          accessor: (v) => `$${Number(v.totalNum || v.valor_total || 0).toLocaleString('es-CO')}`,
+        },
+        { header: 'Estado', key: 'estado' },
+      ],
+      title: 'Reporte de Ventas',
+      subtitle: 'Facturación en mostrador y pedidos liquidados en CENAREPAS',
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      data: filteredData,
+      columns: [
+        { header: 'ID Venta', key: 'id_venta', align: 'center' },
+        {
+          header: 'Cliente',
+          accessor: (v) => v.cliente_nombre || clientesNames[v.id_cliente] || `Cliente #${v.id_cliente}`,
+        },
+        {
+          header: 'Fecha y Hora Venta',
+          accessor: (v) => (v.fecha_venta ? new Date(v.fecha_venta).toLocaleString('es-CO') : 'N/A'),
+          align: 'center',
+        },
+        { header: 'Medio de Pago', key: 'medio_pago' },
+        {
+          header: 'Valor Total ($)',
+          accessor: (v) => `$${Number(v.totalNum || v.valor_total || 0).toLocaleString('es-CO')}`,
+          align: 'right',
+        },
+        { header: 'Estado', key: 'estado', align: 'center' },
+        { header: 'Comprobante URL', key: 'comprobante_url' },
+      ],
+      title: 'Reporte de Ventas',
+      subtitle: 'Facturación en mostrador y pedidos liquidados en CENAREPAS',
+      sheetName: 'Ventas',
+    });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Ventas"
-        subtitle="Registro de ventas realizadas en Masarepas"
-        addLabel="Nueva Venta"
-        addDisabled={!can('ventas', 'crear')}
-        onAdd={() => {
-          setSelectedVenta(null);
-          setShowModal(true);
-        }}
+        subtitle="Pedidos entregados (solo lectura). Para registrar una venta, entrega el pedido desde Pedidos."
+        onExportPdf={handleExportPdf}
+        onExportExcel={handleExportExcel}
       />
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
         <MetricCard index={0} title="Ventas Totales ($)" value={`$${ventasHoy.toLocaleString('es-CO')}`} icon={DollarSign} variant="success" />
         <MetricCard index={1} title="Total Registros" value={`${totalVentas} ventas`} icon={BarChart3} variant="primary" />
         <MetricCard index={2} title="Promedio Ticket" value={`$${Math.round(promedioVentas).toLocaleString('es-CO')}`} icon={TrendingUp} variant="accent" />
-        <MetricCard index={3} title="Completadas" value={rawVentas.filter((v) => String(v.estado).toLowerCase() === 'completada').length} icon={ShoppingBag} variant="warning" />
+        <MetricCard index={3} title="Pagadas" value={rawVentas.filter((v) => String(v.estado).toLowerCase() === 'pagada').length} icon={ShoppingBag} variant="warning" />
       </div>
+
+      <ErrorBanner message={loadError} onRetry={refetch} />
+
       <DataTable
         columns={columns}
         data={filteredData}
+        isLoading={isLoading}
         emptyIcon={DollarSign}
         entityName="ventas"
-        onAdd={() => {
-          setSelectedVenta(null);
-          setShowModal(true);
-        }}
-        addLabel="Nueva Venta"
-        addDisabled={!can('ventas', 'crear')}
         isFiltered={Boolean(searchQuery || estadoFilter !== 'Todos')}
         searchPlaceholder="Buscar por ID, cliente, sede o medio de pago..."
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         filters={
-          <CustomSelect
-            value={estadoFilter}
-            onChange={(e) => setEstadoFilter(e.target.value)}
-            className="w-full sm:w-48"
-          >
-            <option value="Todos">Todos los estados</option>
-            <option value="completada">Completada</option>
-            <option value="anulada">Anulada</option>
-          </CustomSelect>
+          <>
+            <CustomSelect
+              value={estadoFilter}
+              onChange={(e) => setEstadoFilter(e.target.value)}
+              className="w-full sm:w-48"
+            >
+              <option value="Todos">Todos los estados</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Pagada">Pagada</option>
+              <option value="Anulada">Anulada</option>
+            </CustomSelect>
+            <label className="inline-flex items-center gap-2 text-sm text-foreground whitespace-nowrap cursor-pointer">
+              <input
+                type="checkbox"
+                checked={mostrarAnuladas}
+                onChange={(e) => setMostrarAnuladas(e.target.checked)}
+                className="size-4 accent-[#C1502D] cursor-pointer"
+              />
+              Mostrar anuladas
+            </label>
+          </>
         }
       />
       <DetailModal
@@ -224,7 +288,7 @@ export default function VentasPage() {
               <div className="space-y-1 mt-1 text-left w-full">
                 {(detailModal.data.detalles || []).map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-border/40 last:border-0">
-                    <span className="font-medium text-foreground">{item.nombre_producto || `Producto #${item.id_producto}`}</span>
+                    <span className="font-medium text-foreground">{item.producto_nombre || `Producto #${item.id_producto}`}</span>
                     <span className="text-muted-foreground">{item.cantidad} und x ${Number(item.precio_unitario).toLocaleString('es-CO')} = <strong className="text-primary">${Number(item.subtotal).toLocaleString('es-CO')}</strong></span>
                   </div>
                 ))}
@@ -234,39 +298,31 @@ export default function VentasPage() {
           {
             label: 'Comprobante de Pago',
             value: detailModal.data.comprobante_url ? (
-              <a
-                href={detailModal.data.comprobante_url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-primary hover:underline font-medium text-xs inline-flex items-center gap-1"
-              >
-                Ver comprobante adjunto
-              </a>
+              <ComprobanteVentaButton key={detailModal.data.id_venta} idVenta={detailModal.data.id_venta} />
             ) : (
               'Sin comprobante adjunto'
             ),
           },
+          // La anulación (quién, cuándo y por qué) justo antes del Estado, que sigue de último.
+          ...(esVentaAnulada(detailModal.data) ? [
+            { label: 'Anulada por', value: detailModal.data.anulado_por || 'Sin registro' },
+            {
+              label: 'Fecha de Anulación',
+              value: detailModal.data.fecha_anulacion ? new Date(detailModal.data.fecha_anulacion).toLocaleString('es-CO') : 'N/A',
+            },
+            { label: 'Motivo de Anulación', value: detailModal.data.motivo_anulacion || 'Sin motivo registrado' },
+          ] : []),
           { label: 'Estado', value: detailModal.data.estado },
         ] : []}
       />
-      <VentaFormModal
-        open={showModal}
-        venta={selectedVenta}
-        onSave={handleSave}
-        isLoading={isSaving}
-        onClose={() => {
-          setShowModal(false);
-          setSelectedVenta(null);
-        }}
-      />
-      <ConfirmDialog
-        isOpen={deleteDialog.isOpen}
-        title="Anular Venta"
-        message={`¿Estás seguro de que deseas anular la venta "${deleteDialog.nombre}"? Esta acción no se puede deshacer.`}
-        confirmText="Anular"
-        onConfirm={handleAnular}
-        onCancel={() => setDeleteDialog({ isOpen: false, id: null, nombre: '' })}
-        isLoading={isDeleting}
+
+      <AnularVentaModal
+        venta={anulacion.venta}
+        enviando={anulacion.enviando}
+        error={anulacion.error}
+        onConfirmar={anulacion.confirmar}
+        onCerrar={anulacion.cerrar}
+        onEscribir={anulacion.limpiarError}
       />
     </div>
   );

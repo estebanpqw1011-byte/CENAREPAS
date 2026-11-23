@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Factory, CheckCircle, Clock, Calendar } from 'lucide-react';
+import { Factory, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { useProduccion } from '../hooks/useProduccion';
-import { getInsumos } from '../../insumos/services/insumosService';
 import { getFichasTecnicas } from '../../fichas-tecnicas/services/fichasTecnicasService';
 import { getUsuarios } from '../../usuarios/services/usuariosService';
 import { DataTable } from '../../../shared/components/DataTable';
@@ -12,9 +11,13 @@ import DetailModal from '../../../shared/components/DetailModal';
 import PageHeader from '../../../shared/components/PageHeader';
 import { MetricCard } from '../../../shared/components/MetricCard';
 import { usePermissions } from '../../../shared/contexts/PermissionContext';
-import StatusSwitch from '../../../shared/components/StatusSwitch';
+import EstadoBadge from '../../../shared/ui/EstadoBadge';
 import { CustomSelect } from '../../../shared/components/CustomSelect';
-import { formatDate } from '../../../shared/utils/formatDate';
+import ErrorBanner from '../../../shared/components/ErrorBanner';
+import { exportToPdf } from '../../../shared/utils/exportToPdf';
+import { exportToExcel } from '../../../shared/utils/exportToExcel';
+
+const normalizeEstado = (estado) => String(estado || '').toLowerCase().replace(/_/g, ' ');
 
 export default function ProduccionPage() {
   const { can } = usePermissions();
@@ -33,7 +36,8 @@ export default function ProduccionPage() {
     isDeleting,
     isSaving,
     isLoading,
-    hasLoadError,
+    loadError,
+    refetch,
     handleSave,
     handleAnular,
   } = useProduccion();
@@ -41,20 +45,12 @@ export default function ProduccionPage() {
   const [selectedLote, setSelectedLote] = useState(null);
   const [fichas, setFichas] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
-  const [insumosList, setInsumosList] = useState([]);
-
   const getLoteInsumosList = (lote) => {
     if (!lote) return [];
-    const insumos = Array.isArray(lote.insumos) ? lote.insumos : lote.insumos_consumidos;
-    if (!Array.isArray(insumos)) return [];
-    return insumos.map((item) => ({
-      ...item,
-      nombre: item.insumo_nombre || item.nombre || '—',
-      cantidad: item.cantidad ?? item.cantidad_consumida,
-      unidad_medida: item.unidad_medida ||
-        insumosList.find((insumo) => String(insumo.id_insumo) === String(item.id_insumo))?.unidad_medida ||
-        '—',
-    }));
+    if (Array.isArray(lote.insumos_consumidos) && lote.insumos_consumidos.length > 0) {
+      return lote.insumos_consumidos;
+    }
+    return [];
   };
 
   useEffect(() => {
@@ -63,9 +59,6 @@ export default function ProduccionPage() {
     }).catch(() => {});
     getUsuarios().then((data) => {
       if (Array.isArray(data)) setUsuarios(data);
-    }).catch(() => {});
-    getInsumos().then((data) => {
-      if (Array.isArray(data)) setInsumosList(data);
     }).catch(() => {});
   }, []);
 
@@ -81,9 +74,9 @@ export default function ProduccionPage() {
 
 
   const totalLotes = rawLotes.length;
-  const finalizados = rawLotes.filter((l) => String(l.estado).toLowerCase() === 'finalizado').length;
-  const enProceso = rawLotes.filter((l) => String(l.estado).toLowerCase() === 'en proceso' || String(l.estado).toLowerCase() === 'en_proceso').length;
-  const programados = rawLotes.filter((l) => String(l.estado).toLowerCase() === 'programado').length;
+  const finalizados = rawLotes.filter((l) => normalizeEstado(l.estado) === 'terminado').length;
+  const enProceso = rawLotes.filter((l) => normalizeEstado(l.estado) === 'en proceso').length;
+  const anulados = rawLotes.filter((l) => normalizeEstado(l.estado) === 'anulado').length;
 
   const filteredData = useMemo(() => {
     return rawLotes.filter((l) => {
@@ -101,7 +94,7 @@ export default function ProduccionPage() {
 
       const isTodosEstado = estadoFilter === 'Todos' || estadoFilter === 'Todos los estados';
       const matchesEstado =
-        isTodosEstado || String(l.estado).toLowerCase() === estadoFilter.toLowerCase();
+        isTodosEstado || normalizeEstado(l.estado) === normalizeEstado(estadoFilter);
 
       return matchesSearch && matchesEstado;
     });
@@ -124,6 +117,16 @@ export default function ProduccionPage() {
         ),
       },
       {
+        key: 'fecha_produccion',
+        label: 'Fecha',
+        render: (value) => <span className="text-muted-foreground text-sm">{value}</span>,
+      },
+      {
+        key: 'cantidad_producida',
+        label: 'Cantidad Producida',
+        render: (value) => <span className="font-semibold text-sm">{Number(value || 0).toLocaleString('es-CO')} und</span>,
+      },
+      {
         key: 'id_usuario_responsable',
         label: 'Responsable',
         render: (value) => (
@@ -133,25 +136,24 @@ export default function ProduccionPage() {
         ),
       },
       {
-        key: 'cantidad_producida',
-        label: 'Cantidad Producida',
-        render: (value) => <span className="font-semibold text-sm">{Number(value || 0).toLocaleString('es-CO')} und</span>,
-      },
-      {
-        key: 'fecha_produccion',
-        label: 'Fecha',
-        render: (value) => <span className="text-muted-foreground text-sm">{formatDate(value)}</span>,
-      },
-      {
         key: 'estado',
         label: 'Estado',
-        render: (value) => <StatusSwitch value={value} />,
+        render: (value) => (
+          <EstadoBadge
+            value={value}
+            statusMap={{
+              'en proceso': { label: 'En proceso', color: 'warning' },
+              terminado: { label: 'Terminado', color: 'success' },
+              anulado: { label: 'Anulado', color: 'destructive' },
+            }}
+          />
+        ),
       },
       {
         key: 'acciones',
         label: 'Acciones',
         render: (_, lote) => {
-          const isAnulado = String(lote.estado).toLowerCase() === 'anulado';
+          const isAnulado = normalizeEstado(lote.estado) === 'anulado';
           return (
             <RowActions
               onView={() => setDetailModal({ isOpen: true, data: lote })}
@@ -170,7 +172,7 @@ export default function ProduccionPage() {
                       })
                   : undefined
               }
-              deleteDisabled={!can('produccion', 'eliminar') || isAnulado}
+              deleteDisabled={!can('produccion', 'anular') || isAnulado}
               deleteTitle="Anular Lote"
             />
           );
@@ -179,6 +181,59 @@ export default function ProduccionPage() {
     ],
     [can, fichasNames, usuariosNames, setDetailModal, setShowModal, setDeleteDialog]
   );
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      data: filteredData,
+      columns: [
+        { header: 'ID Lote', key: 'id_lote' },
+        {
+          header: 'Ficha / Receta',
+          accessor: (l) => fichasNames[l.id_ficha] || `Ficha #${l.id_ficha}`,
+        },
+        {
+          header: 'Cantidad Producida',
+          accessor: (l) => `${l.cantidad_producida || 0} pqtes`,
+        },
+        { header: 'Fecha Producción', key: 'fecha_produccion' },
+        {
+          header: 'Responsable',
+          accessor: (l) => usuariosNames[l.id_usuario_responsable] || `Usuario #${l.id_usuario_responsable}`,
+        },
+        { header: 'Estado', key: 'estado' },
+      ],
+      title: 'Reporte de Lotes de Producción',
+      subtitle: 'Control de lotes elaborados, fechas y operarios responsables en CENAREPAS',
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      data: filteredData,
+      columns: [
+        { header: 'ID Lote', key: 'id_lote', align: 'center' },
+        {
+          header: 'Ficha Técnica / Receta',
+          accessor: (l) => fichasNames[l.id_ficha] || `Ficha #${l.id_ficha}`,
+        },
+        {
+          header: 'Cantidad Producida (pqtes)',
+          accessor: (l) => l.cantidad_producida || 0,
+          align: 'right',
+        },
+        { header: 'Fecha de Producción', key: 'fecha_produccion', align: 'center' },
+        {
+          header: 'Responsable de Turno',
+          accessor: (l) => usuariosNames[l.id_usuario_responsable] || `Usuario #${l.id_usuario_responsable}`,
+        },
+        { header: 'Observaciones', key: 'observaciones' },
+        { header: 'Estado', key: 'estado', align: 'center' },
+      ],
+      title: 'Reporte de Lotes de Producción',
+      subtitle: 'Control de lotes elaborados, fechas y operarios responsables en CENAREPAS',
+      sheetName: 'Produccion',
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -191,20 +246,25 @@ export default function ProduccionPage() {
           setSelectedLote(null);
           setShowModal(true);
         }}
+        onExportPdf={handleExportPdf}
+        onExportExcel={handleExportExcel}
       />
 
       {/* Tarjetas de Consolidado */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard index={0} title="Total Lotes" value={isLoading || hasLoadError ? '—' : totalLotes} icon={Factory} variant="primary" />
-        <MetricCard index={1} title="Finalizados" value={isLoading || hasLoadError ? '—' : finalizados} icon={CheckCircle} variant="success" />
-        <MetricCard index={2} title="En Proceso" value={isLoading || hasLoadError ? '—' : enProceso} icon={Clock} variant="warning" />
-        <MetricCard index={3} title="Programados" value={isLoading || hasLoadError ? '—' : programados} icon={Calendar} variant="accent" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
+        <MetricCard index={0} title="Total Lotes" value={totalLotes} icon={Factory} variant="primary" />
+        <MetricCard index={1} title="Finalizados" value={finalizados} icon={CheckCircle} variant="success" />
+        <MetricCard index={2} title="En Proceso" value={enProceso} icon={Clock} variant="warning" />
+        <MetricCard index={3} title="Anulados" value={anulados} icon={XCircle} variant="destructive" />
       </div>
+
+      <ErrorBanner message={loadError} onRetry={refetch} />
 
       {/* Tabla con DataTable y RowActions */}
       <DataTable
         columns={columns}
         data={filteredData}
+        isLoading={isLoading}
         emptyIcon={Factory}
         entityName="órdenes de producción"
         onAdd={() => {
@@ -224,9 +284,8 @@ export default function ProduccionPage() {
             className="w-full sm:w-52"
           >
             <option value="Todos">Todos los estados</option>
-            <option value="Finalizado">Finalizado</option>
-            <option value="En Proceso">En Proceso</option>
-            <option value="Programado">Programado</option>
+            <option value="En proceso">En Proceso</option>
+            <option value="Terminado">Terminado</option>
             <option value="Anulado">Anulado</option>
           </CustomSelect>
         }
@@ -239,14 +298,10 @@ export default function ProduccionPage() {
         fields={detailModal.data ? [
           { label: 'ID', value: `#${detailModal.data.id_lote}` },
           { label: 'Ficha / Receta', value: fichasNames[detailModal.data.id_ficha] || `Receta #${detailModal.data.id_ficha}` },
+          { label: 'Fecha de Producción', value: detailModal.data.fecha_produccion },
+          { label: 'Cantidad Producida', value: `${Number(detailModal.data.cantidad_producida || 0).toLocaleString('es-CO')} und` },
           { label: 'Responsable', value: usuariosNames[detailModal.data.id_usuario_responsable] || `Usuario #${detailModal.data.id_usuario_responsable}` },
-          { label: 'Fecha de Producción', value: formatDate(detailModal.data.fecha_produccion) },
-          {
-            label: 'Cantidad Producida',
-            value: detailModal.data.cantidad_producida == null || detailModal.data.cantidad_producida === ''
-              ? '—'
-              : `${Number(detailModal.data.cantidad_producida).toLocaleString('es-CO')} und`,
-          },
+          { label: 'Observaciones', value: detailModal.data.observaciones || 'N/A' },
           {
             label: 'Insumos Utilizados',
             value: (() => {
@@ -256,9 +311,9 @@ export default function ProduccionPage() {
                 <div className="space-y-1 w-full text-left">
                   {list.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between gap-3 text-xs bg-card p-1.5 rounded border border-border/50">
-                      <span className="font-medium text-foreground">{item.nombre}</span>
+                      <span className="font-medium text-foreground">{item.insumo_nombre}</span>
                       <span className="font-semibold text-primary px-2 py-0.5 bg-primary/10 rounded">
-                        {item.cantidad} {item.unidad_medida || '—'}
+                        {item.cantidad_consumida} {item.unidad_medida || 'kg'}
                       </span>
                     </div>
                   ))}
@@ -266,7 +321,6 @@ export default function ProduccionPage() {
               );
             })(),
           },
-          { label: 'Observaciones', value: detailModal.data.observaciones || 'N/A' },
           { label: 'Estado', value: detailModal.data.estado },
         ] : []}
       />
@@ -285,7 +339,7 @@ export default function ProduccionPage() {
       <ConfirmDialog
         isOpen={deleteDialog.isOpen}
         title="Anular Lote de Producción"
-        message={`¿Deseas anular el lote "${deleteDialog.nombre}"? Se conservará el registro y, si el inventario fue actualizado al crearlo, se revertirán esos movimientos.`}
+        message={`¿Estás seguro de que deseas anular el lote "${deleteDialog.nombre}"? Esta acción no se puede deshacer.`}
         confirmText="Anular"
         onConfirm={handleAnular}
         onCancel={() => setDeleteDialog({ isOpen: false, id: null, nombre: '' })}

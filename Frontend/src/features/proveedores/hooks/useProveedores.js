@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getProveedores, createProveedor, updateProveedor, deleteProveedor } from '../services/proveedoresService';
+import { getProveedores, createProveedor, updateProveedor, deleteProveedor, cambiarEstadoProveedor } from '../services/proveedoresService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useProveedores() {
@@ -9,13 +9,27 @@ export function useProveedores() {
   const [showModal, setShowModal] = useState(false);
   const [detailModal, setDetailModal] = useState({ isOpen: false, data: null });
   const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, id: null, nombre: '' });
+  const [statusDialog, setStatusDialog] = useState({ isOpen: false, proveedor: null, nextEstado: 'Activo' });
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  const fetchProveedores = () => {
+    setIsLoading(true);
+    setLoadError(null);
+    return getProveedores()
+      .then((data) => setProveedores(Array.isArray(data) ? data : []))
+      .catch((error) => {
+        setProveedores([]);
+        setLoadError(error?.message || 'No se pudieron cargar los proveedores');
+      })
+      .finally(() => setIsLoading(false));
+  };
 
   useEffect(() => {
-    getProveedores()
-      .then((data) => setProveedores(Array.isArray(data) ? data : []))
-      .catch(() => setProveedores([]));
+    fetchProveedores();
   }, []);
 
   const filteredProveedores = useMemo(() => {
@@ -48,7 +62,7 @@ export function useProveedores() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar el proveedor');
+      toast.error(error?.data?.message || 'No se pudo guardar el proveedor');
     } finally {
       setIsSaving(false);
     }
@@ -69,6 +83,39 @@ export function useProveedores() {
     }
   };
 
+  const handleRequestStatusChange = (proveedor) => {
+    if (!proveedor) return;
+    const isCurrentlyActive = String(proveedor.estado || '').toLowerCase() === 'activo';
+    const nextEstado = isCurrentlyActive ? 'Inactivo' : 'Activo';
+    setStatusDialog({
+      isOpen: true,
+      proveedor,
+      nextEstado,
+    });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!statusDialog.proveedor) return;
+    setIsUpdatingStatus(true);
+    try {
+      const { id_proveedor, nombre } = statusDialog.proveedor;
+      const actualizado = await cambiarEstadoProveedor(id_proveedor, statusDialog.nextEstado);
+
+      setProveedores((prev) =>
+        prev.map((p) =>
+          p.id_proveedor === id_proveedor ? { ...p, estado: actualizado?.estado || statusDialog.nextEstado } : p
+        )
+      );
+
+      toast.success(`Estado del proveedor "${nombre}" cambiado a ${statusDialog.nextEstado}`);
+      setStatusDialog({ isOpen: false, proveedor: null, nextEstado: 'Activo' });
+    } catch (error) {
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado del proveedor');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   return {
     proveedores: filteredProveedores,
     rawProveedores: proveedores,
@@ -82,10 +129,18 @@ export function useProveedores() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
+    isLoading,
+    loadError,
+    refetch: fetchProveedores,
     handleSave,
     handleDelete,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   };
 }
 

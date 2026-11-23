@@ -1,4 +1,5 @@
 import { User, Mail, Phone, Building, Calendar, Clock, Edit, Camera, Save, X } from 'lucide-react';
+import { usePermissions } from '../../../shared/contexts/PermissionContext';
 
 export function ProfilePersonalForm({
   profileData,
@@ -7,23 +8,43 @@ export function ProfilePersonalForm({
   setIsEditing,
   handleSaveProfile,
 }) {
+  const { roleId, roleName, currentUserMeta } = usePermissions();
+  const initials = profileData.iniciales || currentUserMeta?.iniciales || 'US';
+  const roleBadgeStyle =
+    roleId === 2
+      ? 'bg-[#5A7A3A]/15 text-[#5A7A3A] dark:text-[#AEC094]'
+      : roleId === 3
+      ? 'bg-[#E8B23D]/20 text-[#8A5A14] dark:text-[#E8B23D]'
+      : 'bg-primary/10 text-primary';
+
+  const avatarBg =
+    roleId === 2
+      ? 'bg-[#5A7A3A] text-white'
+      : roleId === 3
+      ? 'bg-[#E8B23D] text-slate-900'
+      : 'bg-primary text-primary-foreground';
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-1">
-        <div className="bg-card p-6 rounded-lg border border-border text-center">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+      <div className="lg:col-span-1 flex flex-col">
+        <div className="bg-card p-6 rounded-lg border border-border text-center flex flex-col justify-between h-full w-full">
           <div className="relative inline-block mb-4">
-            <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center text-primary mx-auto">
-              <User className="w-16 h-16" />
+            <div className={`w-28 h-28 ${avatarBg} rounded-full flex items-center justify-center font-bold text-3xl mx-auto shadow-md`}>
+              <span>{initials}</span>
             </div>
             {isEditing && (
-              <button className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full hover:opacity-90">
+              <button className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full hover:opacity-90 shadow-sm cursor-pointer">
                 <Camera className="w-4 h-4" />
               </button>
             )}
           </div>
           <h3 className="font-semibold text-lg">{profileData.nombre}</h3>
-          <p className="text-sm text-muted-foreground mb-4">{profileData.cargo}</p>
-          <div className="flex gap-2">
+          <div className="mt-1 mb-4 flex items-center justify-center">
+            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${roleBadgeStyle}`}>
+              {profileData.cargo || roleName}
+            </span>
+          </div>
+          <div className="flex gap-2 mt-auto">
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
@@ -54,8 +75,8 @@ export function ProfilePersonalForm({
         </div>
       </div>
 
-      <div className="lg:col-span-2">
-        <div className="bg-card p-6 rounded-lg border border-border">
+      <div className="lg:col-span-2 flex flex-col">
+        <div className="bg-card p-6 rounded-lg border border-border flex flex-col h-full w-full">
           <h3 className="mb-6 font-semibold text-lg">Información Personal</h3>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

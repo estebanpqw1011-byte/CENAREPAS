@@ -4,11 +4,13 @@ import { toast } from '../utils/toast';
 export default function StatusSwitch({
   value,
   onChange,
+  onToggle,
   activeValue = 'activo',
   inactiveValue = 'inactivo',
   entityLabel = 'Estado',
   activeLabel,
   inactiveLabel,
+  disabled = false,
 }) {
   const checkIsActive = (val) => {
     const s = String(val ?? '').toLowerCase().trim();
@@ -46,6 +48,11 @@ export default function StatusSwitch({
 
   const handleToggle = (e) => {
     e?.stopPropagation?.();
+    if (disabled) return;
+    if (onToggle) {
+      onToggle(e);
+      return;
+    }
     const nextEnabled = !enabled;
     setEnabled(nextEnabled);
     const nextVal = nextEnabled ? activeValue : inactiveValue;
@@ -59,8 +66,13 @@ export default function StatusSwitch({
       role="switch"
       aria-checked={enabled}
       aria-label={`${entityLabel}: ${displayLabel}`}
+      disabled={disabled}
       onClick={handleToggle}
-      className="inline-flex items-center gap-2.5 px-2 py-1 -mx-2 -my-1 rounded-full hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors duration-150 cursor-pointer select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A7A3A]/40"
+      className={`inline-flex items-center gap-2.5 px-2 py-1 -mx-2 -my-1 rounded-full transition-colors duration-150 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A7A3A]/40 ${
+        disabled
+          ? 'cursor-default opacity-85'
+          : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/60 cursor-pointer'
+      }`}
     >
       {/* Track del Switch */}
       <div

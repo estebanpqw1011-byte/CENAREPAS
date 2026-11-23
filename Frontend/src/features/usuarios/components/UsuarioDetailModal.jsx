@@ -1,4 +1,5 @@
-import { X, Mail, Shield, Calendar, Hash, UserCheck, UserX } from 'lucide-react';
+import { X, Mail, Shield, Calendar, Hash, UserCheck, UserX, IdCard } from 'lucide-react';
+import { NOMBRES_DOCUMENTO } from '../../../shared/config/negocio';
 
 export default function UsuarioDetailModal({ isOpen, onClose, usuario, roleNames = {} }) {
   if (!isOpen || !usuario) return null;
@@ -64,25 +65,6 @@ export default function UsuarioDetailModal({ isOpen, onClose, usuario, roleNames
               {usuario.correo}
             </p>
           </div>
-          <span
-            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-              isActive
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                : 'bg-destructive/10 text-destructive border border-destructive/20'
-            }`}
-          >
-            {isActive ? (
-              <>
-                <UserCheck className="w-3 h-3" />
-                Activo
-              </>
-            ) : (
-              <>
-                <UserX className="w-3 h-3" />
-                Inactivo
-              </>
-            )}
-          </span>
         </div>
 
         {/* Details Grid */}
@@ -94,6 +76,18 @@ export default function UsuarioDetailModal({ isOpen, onClose, usuario, roleNames
             </span>
             <span className="font-mono font-semibold text-xs text-foreground">
               #{usuario.id_usuario}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-muted/40 border border-border/50">
+            <span className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+              <IdCard className="w-3.5 h-3.5" />
+              Documento
+            </span>
+            <span className="text-xs font-medium text-foreground text-right">
+              {usuario.documento
+                ? `${NOMBRES_DOCUMENTO[usuario.tipo_documento] || usuario.tipo_documento} ${usuario.documento}`
+                : 'Sin registrar'}
             </span>
           </div>
 
@@ -114,6 +108,33 @@ export default function UsuarioDetailModal({ isOpen, onClose, usuario, roleNames
             </span>
             <span className="text-xs font-medium text-foreground">
               {formatDate(usuario.fecha_creacion)}
+            </span>
+          </div>
+
+          {/* Estado (siempre de último) */}
+          <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border/50">
+            <span className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+              {isActive ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />}
+              Estado
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                isActive
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-destructive/10 text-destructive border border-destructive/20'
+              }`}
+            >
+              {isActive ? (
+                <>
+                  <UserCheck className="w-3 h-3" />
+                  Activo
+                </>
+              ) : (
+                <>
+                  <UserX className="w-3 h-3" />
+                  Inactivo
+                </>
+              )}
             </span>
           </div>
         </div>

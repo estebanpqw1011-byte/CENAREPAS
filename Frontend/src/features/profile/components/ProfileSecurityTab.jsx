@@ -7,58 +7,60 @@ export function ProfileSecurityTab({
   sessions = [],
 }) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-card p-6 rounded-lg border border-border">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      <div className="bg-card p-6 rounded-lg border border-border flex flex-col justify-between h-full w-full">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 bg-primary/10 rounded-lg">
             <Lock className="w-5 h-5 text-primary" />
           </div>
           <h3 className="font-semibold text-lg">Cambiar Contraseña</h3>
         </div>
-        <form onSubmit={handleChangePassword} className="space-y-4">
-          <div>
-            <label className="block mb-2 text-sm">Contraseña Actual</label>
-            <input
-              type="password"
-              value={passwordData.currentPassword}
-              onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-2 text-sm">Nueva Contraseña</label>
-            <input
-              type="password"
-              value={passwordData.newPassword}
-              onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-2 text-sm">Confirmar Contraseña</label>
-            <input
-              type="password"
-              value={passwordData.confirmPassword}
-              onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="••••••••"
-              required
-            />
+        <form onSubmit={handleChangePassword} className="space-y-4 flex-1 flex flex-col justify-between">
+          <div className="space-y-4">
+            <div>
+              <label className="block mb-2 text-sm">Contraseña Actual</label>
+              <input
+                type="password"
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                className="w-full px-4 py-2 border border-input bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+            <div>
+              <label className="block mb-2 text-sm">Nueva Contraseña</label>
+              <input
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                className="w-full px-4 py-2 border border-input bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+            <div>
+              <label className="block mb-2 text-sm">Confirmar Contraseña</label>
+              <input
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                className="w-full px-4 py-2 border border-input bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="••••••••"
+                required
+              />
+            </div>
           </div>
           <button
             type="submit"
-            className="w-full bg-primary text-primary-foreground py-2 rounded-lg hover:opacity-90 font-medium"
+            className="w-full bg-primary text-primary-foreground py-2 rounded-lg hover:opacity-90 font-medium mt-auto"
           >
             Actualizar Contraseña
           </button>
         </form>
       </div>
 
-      <div className="bg-card p-6 rounded-lg border border-border">
+      <div className="bg-card p-6 rounded-lg border border-border flex flex-col justify-between h-full w-full">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 bg-accent/10 rounded-lg">
             <Monitor className="w-5 h-5 text-accent" />

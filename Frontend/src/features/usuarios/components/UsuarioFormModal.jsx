@@ -1,50 +1,127 @@
-import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
-import { getRoles } from '../../roles/services/rolesService';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Shield, Mail, Lock, User, CheckCircle2, IdCard } from 'lucide-react';
 import { Combobox } from '../../../shared/ui/Combobox';
+import { StepperModal } from '../../../shared/components/StepperModal';
+import { getOpcionesComo, conValorActual } from '../../../shared/services/opciones';
+import { OPCIONES_TIPO_DOCUMENTO, DOCUMENTO_VALIDO } from '../../../shared/config/negocio';
+
+// Igual que CONTRASENA_MIN del backend (Backend/src/config/negocio.js).
+const CONTRASENA_MIN = 8;
 
 export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoading = false }) {
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
+  const [tipoDocumento, setTipoDocumento] = useState('CC');
+  const [documento, setDocumento] = useState('');
   const [idRol, setIdRol] = useState('1');
   const [contrasena, setContrasena] = useState('');
-  const [estado, setEstado] = useState('activo');
+  const [estado, setEstado] = useState('Activo');
   const [roles, setRoles] = useState([]);
+  const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    getRoles().then((data) => {
-      if (Array.isArray(data)) setRoles(data);
-    }).catch(() => {});
+    getOpcionesComo('roles', 'id_rol')
+      .then((data) => {
+        if (Array.isArray(data)) setRoles(data);
+      })
+      .catch(() => {});
   }, []);
 
-
   useEffect(() => {
-    if (usuario) {
-      setNombre(usuario.nombre || '');
-      setCorreo(usuario.correo || '');
-      setIdRol(usuario.id_rol ? String(usuario.id_rol) : '1');
-      setContrasena('');
-      setEstado(usuario.estado || 'activo');
+    if (open) {
+      setCurrentStep(0);
+      if (usuario) {
+        setNombre(usuario.nombre || '');
+        setCorreo(usuario.correo || '');
+        setTipoDocumento(usuario.tipo_documento || 'CC');
+        setDocumento(usuario.documento || '');
+        setIdRol(usuario.id_rol ? String(usuario.id_rol) : '1');
+        setContrasena('');
+        setEstado(usuario.estado || 'Activo');
+      } else {
+        setNombre('');
+        setCorreo('');
+        setTipoDocumento('CC');
+        setDocumento('');
+        setIdRol(roles[0]?.id_rol ? String(roles[0].id_rol) : '1');
+        setContrasena('');
+        setEstado('Activo');
+      }
     } else {
-      setNombre('');
-      setCorreo('');
-      setIdRol(roles[0]?.id_rol ? String(roles[0].id_rol) : '1');
-      setContrasena('');
-      setEstado('activo');
+      setCurrentStep(0);
     }
   }, [usuario, open, roles]);
 
-  if (!open) return null;
+  const isDirty = useMemo(() => {
+    if (!open) return false;
+    if (!usuario) {
+      return nombre.trim() !== '' || correo.trim() !== '' || documento.trim() !== '' || contrasena.trim() !== '';
+    }
+    return (
+      nombre !== (usuario.nombre || '') ||
+      correo !== (usuario.correo || '') ||
+      documento !== (usuario.documento || '') ||
+      (documento !== '' && tipoDocumento !== (usuario.tipo_documento || 'CC')) ||
+      idRol !== String(usuario.id_rol || '1') ||
+      estado !== (usuario.estado || 'Activo') ||
+      contrasena.trim() !== ''
+    );
+  }, [open, usuario, nombre, correo, tipoDocumento, documento, idRol, estado, contrasena]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!nombre.trim() || !correo.trim()) return;
+  const validateStep1 = useCallback(() => {
+    if (!nombre.trim()) {
+      return 'El nombre completo del usuario es obligatorio.';
+    }
+    if (nombre.trim().length < 3) {
+      return 'El nombre debe contener al menos 3 caracteres.';
+    }
+    if (!correo.trim()) {
+      return 'El correo electrónico es obligatorio.';
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(correo.trim())) {
+      return 'Por favor ingresa un correo electrónico válido.';
+    }
+    // El documento es opcional; si se escribe, debe ser válido.
+    if (documento.trim() && !DOCUMENTO_VALIDO.test(documento.trim())) {
+      return 'El número de documento debe tener de 5 a 20 letras, números, puntos o guiones.';
+    }
+    return true;
+  }, [nombre, correo, documento]);
+
+  const validateStep2 = useCallback(() => {
+    if (!usuario && !contrasena.trim()) {
+      return 'La contraseña es obligatoria para nuevos usuarios.';
+    }
+    if (contrasena.trim() && contrasena.trim().length < CONTRASENA_MIN) {
+      return `La contraseña debe tener al menos ${CONTRASENA_MIN} caracteres.`;
+    }
+    return true;
+  }, [usuario, contrasena]);
+
+  const handleSubmit = useCallback(() => {
+    const v1 = validateStep1();
+    if (v1 !== true) {
+      setCurrentStep(0);
+      return;
+    }
+    const v2 = validateStep2();
+    if (v2 !== true) {
+      setCurrentStep(1);
+      return;
+    }
+
+    // Sin número, el documento queda vacío (tipo y número van juntos).
+    const documentoPayload = documento.trim()
+      ? { tipo_documento: tipoDocumento, documento: documento.trim() }
+      : { tipo_documento: null, documento: null };
 
     const payload = usuario
       ? {
           ...usuario,
           nombre: nombre.trim(),
           correo: correo.trim(),
+          ...documentoPayload,
           id_rol: Number(idRol) || 1,
           estado,
           ...(contrasena.trim() ? { contrasena_hash: contrasena.trim() } : {}),
@@ -52,8 +129,9 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
       : {
           nombre: nombre.trim(),
           correo: correo.trim(),
+          ...documentoPayload,
           id_rol: Number(idRol) || 1,
-          estado: estado || 'activo',
+          estado: estado || 'Activo',
           contrasena_hash: contrasena.trim() || 'defaultHash',
         };
 
@@ -62,110 +140,201 @@ export function UsuarioFormModal({ open, onClose, usuario = null, onSave, isLoad
     } else {
       onClose();
     }
-  };
+  }, [validateStep1, validateStep2, usuario, nombre, correo, tipoDocumento, documento, idRol, estado, contrasena, onSave, onClose]);
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="form-modal-panel bg-card p-6 rounded-lg max-w-md w-full border border-border space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-start justify-between gap-4">
-          <h2 className="text-lg font-bold">{usuario ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 -mr-2 -mt-2 rounded-lg hover:bg-muted text-muted-foreground"
-            aria-label="Cerrar formulario"
-          >
-            <X className="w-5 h-5" />
-          </button>
+  const steps = useMemo(() => [
+    {
+      id: 'datos-personales',
+      title: 'Datos personales',
+      description: 'Nombre completo, documento y correo electrónico de contacto',
+      validate: validateStep1,
+      content: (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
+          {/* Nombre */}
+          <div className="sm:col-span-2">
+            <label htmlFor="usuario_nombre" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Nombre completo <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
+            <div className="relative">
+              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <input
+                id="usuario_nombre"
+                name="nombre"
+                type="text"
+                maxLength={100}
+                autoFocus
+                placeholder="Ej. Juan Carlos Pérez Gómez"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Nombre y apellido para identificación del usuario en el sistema.
+            </p>
+          </div>
+
+          {/* Tipo de documento (fila propia, sobre el número) */}
+          <div className="sm:col-span-2">
+            <label htmlFor="usuario_tipo_documento" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Tipo de documento
+            </label>
+            <Combobox
+              id="usuario_tipo_documento"
+              name="tipo_documento"
+              value={tipoDocumento}
+              onChange={(e) => setTipoDocumento(e.target.value)}
+              options={OPCIONES_TIPO_DOCUMENTO}
+            />
+          </div>
+
+          {/* Número de documento */}
+          <div className="sm:col-span-2">
+            <label htmlFor="usuario_documento" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Número de documento <span className="text-muted-foreground font-normal text-xs">(Opcional)</span>
+            </label>
+            <div className="relative">
+              <IdCard className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <input
+                id="usuario_documento"
+                name="documento"
+                type="text"
+                maxLength={20}
+                placeholder="Ej. 1020304050"
+                value={documento}
+                onChange={(e) => setDocumento(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Correo */}
+          <div className="sm:col-span-2">
+            <label htmlFor="usuario_correo" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Correo electrónico <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <input
+                id="usuario_correo"
+                name="correo"
+                type="email"
+                maxLength={100}
+                placeholder="usuario@cenarepas.com"
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Servirá como identificador único para iniciar sesión y recibir notificaciones.
+            </p>
+          </div>
+
+          {/* Recuadro de ayuda contextual */}
+          <div className="sm:col-span-2 p-3.5 rounded-xl bg-muted/40 border border-border/60 flex items-start gap-3 text-xs text-muted-foreground">
+            <Shield className="size-4 text-[#C1502D] dark:text-[#E8B23D] shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-foreground block mb-0.5">Gestión de cuentas</span>
+              En el siguiente paso podrás asignar el rol operativo (Administrador, Supervisor, etc.) y establecer las credenciales de seguridad.
+            </div>
+          </div>
         </div>
-        <form onSubmit={handleSubmit} className="modal-form-grid space-y-4">
-          <div>
-            <label htmlFor="usuario_nombre" className="block mb-2 text-sm font-medium">Nombre</label>
-            <input
-              id="usuario_nombre"
-              name="nombre"
-              type="text"
-              maxLength={100}
-              required
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-          <div>
-            <label htmlFor="usuario_correo" className="block mb-2 text-sm font-medium">Correo</label>
-            <input
-              id="usuario_correo"
-              name="correo"
-              type="email"
-              maxLength={100}
-              required
-              value={correo}
-              onChange={(e) => setCorreo(e.target.value)}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-          <div>
-            <label htmlFor="usuario_id_rol" className="block mb-2 text-sm font-medium">Rol</label>
+      ),
+    },
+    {
+      id: 'rol-seguridad',
+      title: 'Seguridad y Rol',
+      description: 'Asignación de rol, estado y contraseña de acceso',
+      validate: validateStep2,
+      content: (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
+          {/* Rol */}
+          <div className="sm:col-span-2">
+            <label htmlFor="usuario_id_rol" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Rol del sistema <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
             <Combobox
               id="usuario_id_rol"
               name="id_rol"
               value={idRol}
               onChange={(e) => setIdRol(e.target.value)}
-              options={roles.map((r) => ({
+              options={conValorActual(roles, 'id_rol', usuario?.id_rol, usuario?.rol_nombre).map((r) => ({
                 value: String(r.id_rol),
                 label: r.nombre,
               }))}
             />
           </div>
-          <div>
-            <label htmlFor="usuario_contrasena" className="block mb-2 text-sm font-medium">
-              Contraseña {usuario ? '(Dejar en blanco para mantener la actual)' : ''}
+
+          {/* Contraseña */}
+          <div className="sm:col-span-2">
+            <label htmlFor="usuario_contrasena" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Contraseña {usuario ? <span className="text-muted-foreground font-normal text-xs">(Dejar en blanco para conservar actual)</span> : <span className="text-destructive font-bold ml-0.5">*</span>}
             </label>
-            <input
-              id="usuario_contrasena"
-              name="contrasena_hash"
-              type="password"
-              maxLength={255}
-              required={!usuario}
-              value={contrasena}
-              onChange={(e) => setContrasena(e.target.value)}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <input
+                id="usuario_contrasena"
+                name="contrasena_hash"
+                type="password"
+                maxLength={255}
+                placeholder={usuario ? '••••••••' : `Mínimo ${CONTRASENA_MIN} caracteres`}
+                value={contrasena}
+                onChange={(e) => setContrasena(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              {usuario ? 'Ingresa una nueva contraseña únicamente si deseas restablecerla.' : `Utiliza una combinación segura de al menos ${CONTRASENA_MIN} caracteres.`}
+            </p>
           </div>
-          <div className="modal-field-wide">
-            <label htmlFor="usuario_estado" className="block mb-2 text-sm font-medium">Estado</label>
+
+          {/* Ayuda contextual de seguridad */}
+          <div className="sm:col-span-2 p-3.5 rounded-xl bg-muted/40 border border-border/60 flex items-start gap-3 text-xs text-muted-foreground">
+            <CheckCircle2 className="size-4 text-[#5A7A3A] shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-foreground block mb-0.5">Control de acceso</span>
+              Los permisos específicos asignados a este usuario dependerán automáticamente del rol seleccionado.
+            </div>
+          </div>
+          {/* Estado (fila completa, último campo) */}
+          <div className="sm:col-span-2">
+            <label htmlFor="usuario_estado" className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
+              Estado de la cuenta <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
             <Combobox
               id="usuario_estado"
               name="estado"
               value={estado}
               onChange={(e) => setEstado(e.target.value)}
               options={[
-                { value: 'activo', label: 'Activo' },
-                { value: 'inactivo', label: 'Inactivo' },
+                { value: 'Activo', label: 'Activo' },
+                { value: 'Inactivo', label: 'Inactivo' },
               ]}
             />
           </div>
-          <div className="modal-field-wide flex gap-3 pt-6 border-t border-border/50">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isLoading}
-              className="flex-1 px-4 py-2.5 border border-border rounded-lg hover:bg-muted text-sm font-medium transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 text-sm font-medium transition-colors cursor-pointer shadow-xs"
-            >
-              {isLoading ? 'Guardando...' : usuario ? 'Guardar Cambios' : 'Guardar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+
+        </div>
+      ),
+    },
+  ], [nombre, correo, tipoDocumento, documento, idRol, estado, contrasena, roles, usuario, validateStep1, validateStep2]);
+
+  return (
+    <StepperModal
+      isOpen={open}
+      onClose={onClose}
+      category="USUARIOS"
+      title={usuario ? 'Editar Usuario' : 'Nuevo Usuario'}
+      subtitle="Gestiona la información y credenciales de acceso del colaborador"
+      steps={steps}
+      currentStep={currentStep}
+      onStepChange={setCurrentStep}
+      onSubmit={handleSubmit}
+      isLoading={isLoading}
+      submitLabel={usuario ? 'Guardar Cambios' : 'Crear Usuario'}
+      isDirty={isDirty}
+    />
   );
 }
 
+export default UsuarioFormModal;

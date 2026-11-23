@@ -5,12 +5,14 @@ import { DataTable } from '../../../shared/components/DataTable';
 import { RowActions } from '../../../shared/components/RowActions';
 import { CategoriaFormModal } from '../components/CategoriaFormModal';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
-import DetailModal from '../../../shared/components/DetailModal';
 import PageHeader from '../../../shared/components/PageHeader';
 import { MetricCard } from '../../../shared/components/MetricCard';
 import { usePermissions } from '../../../shared/contexts/PermissionContext';
 import StatusSwitch from '../../../shared/components/StatusSwitch';
 import { CustomSelect } from '../../../shared/components/CustomSelect';
+import ErrorBanner from '../../../shared/components/ErrorBanner';
+import { exportToPdf } from '../../../shared/utils/exportToPdf';
+import { exportToExcel } from '../../../shared/utils/exportToExcel';
 
 export default function CategoriasPage() {
   const { can } = usePermissions();
@@ -26,10 +28,18 @@ export default function CategoriasPage() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
+    isLoading,
+    loadError,
+    refetch,
     handleSave,
     handleDelete,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   } = useCategorias();
 
   const [selectedCategoria, setSelectedCategoria] = useState(null);
@@ -74,7 +84,13 @@ export default function CategoriasPage() {
       {
         key: 'estado',
         label: 'Estado',
-        render: (value) => <StatusSwitch value={value} />,
+        render: (value, categoria) => (
+          <StatusSwitch
+            value={value}
+            disabled={!can('categorias', 'editar')}
+            onToggle={() => handleRequestStatusChange(categoria)}
+          />
+        ),
       },
       {
         key: 'acciones',
@@ -99,8 +115,37 @@ export default function CategoriasPage() {
         ),
       },
     ],
-    [can, setDetailModal, setShowModal, setDeleteDialog]
+    [can, setDetailModal, setShowModal, setDeleteDialog, handleRequestStatusChange]
   );
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      data: filteredData,
+      columns: [
+        { header: 'ID', key: 'id_categoria' },
+        { header: 'Nombre Categoría', key: 'nombre' },
+        { header: 'Descripción', key: 'descripcion' },
+        { header: 'Estado', key: 'estado' },
+      ],
+      title: 'Reporte de Categorías de Productos',
+      subtitle: 'Clasificación de productos y líneas de producción en CENAREPAS',
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      data: filteredData,
+      columns: [
+        { header: 'ID', key: 'id_categoria', align: 'center' },
+        { header: 'Categoría', key: 'nombre' },
+        { header: 'Descripción', key: 'descripcion' },
+        { header: 'Estado', key: 'estado', align: 'center' },
+      ],
+      title: 'Reporte de Categorías de Productos',
+      subtitle: 'Clasificación de productos y líneas de producción en CENAREPAS',
+      sheetName: 'Categorias',
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -113,20 +158,25 @@ export default function CategoriasPage() {
           setSelectedCategoria(null);
           setShowModal(true);
         }}
+        onExportPdf={handleExportPdf}
+        onExportExcel={handleExportExcel}
       />
 
       {/* Tarjetas de Consolidado */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
         <MetricCard index={0} title="Total Categorías" value={totalCategorias} icon={FolderTree} variant="primary" />
         <MetricCard index={1} title="Categorías Activas" value={activas} icon={CheckCircle} variant="success" />
         <MetricCard index={2} title="Prod. Clasificados" value={totalProductosAsignados} icon={Package} variant="accent" />
         <MetricCard index={3} title="Promedio Prod/Cat" value={promedioProductos} icon={Layers} variant="warning" />
       </div>
 
+      <ErrorBanner message={loadError} onRetry={refetch} />
+
       {/* Tabla con DataTable y RowActions */}
       <DataTable
         columns={columns}
         data={filteredData}
+        isLoading={isLoading}
         emptyIcon={FolderTree}
         entityName="categorías"
         onAdd={() => {
@@ -152,16 +202,12 @@ export default function CategoriasPage() {
         }
       />
 
-      <DetailModal
-        isOpen={detailModal.isOpen}
+      {/* Ver detalle: el mismo formulario que crear y editar, en modo de solo lectura */}
+      <CategoriaFormModal
+        open={detailModal.isOpen}
+        categoria={detailModal.data}
+        modo="ver"
         onClose={() => setDetailModal({ isOpen: false, data: null })}
-        title="Detalle de Categoría"
-        fields={detailModal.data ? [
-          { label: 'ID', value: detailModal.data.id_categoria },
-          { label: 'Nombre', value: detailModal.data.nombre },
-          { label: 'Descripción', value: detailModal.data.descripcion },
-          { label: 'Estado', value: detailModal.data.estado },
-        ] : []}
       />
 
       <CategoriaFormModal
@@ -183,6 +229,19 @@ export default function CategoriasPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteDialog({ isOpen: false, id: null, nombre: '' })}
         isLoading={isDeleting}
+      />
+
+      {/* Modal de confirmación para Cambio de Estado */}
+      <ConfirmDialog
+        isOpen={statusDialog.isOpen}
+        title={`Cambiar Estado a ${statusDialog.nextEstado}`}
+        message={`¿Estás seguro de que deseas cambiar el estado de la categoría "${statusDialog.categoria?.nombre}" de ${statusDialog.categoria?.estado || 'Activo'} a ${statusDialog.nextEstado}?`}
+        confirmText={`Cambiar a ${statusDialog.nextEstado}`}
+        confirmVariant={statusDialog.nextEstado === 'Activo' ? 'success' : 'warning'}
+        onConfirm={handleConfirmStatusChange}
+        onCancel={() => setStatusDialog({ isOpen: false, categoria: null, nextEstado: 'Activo' })}
+        isLoading={isUpdatingStatus}
+        loadingText="Cambiando estado…"
       />
     </div>
   );

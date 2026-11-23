@@ -183,9 +183,12 @@ export class ProduccionService {
       id_usuario_responsable,
       fecha_produccion = new Date(),
       cantidad_producida,
-      estado = 'en_proceso',
+      estado = 'En proceso',
       observaciones,
     } = data;
+    if (String(estado).toLowerCase() === 'anulado') {
+      throw createError('Use la acción de anulación para registrar un lote anulado', 400);
+    }
     const idFicha = Number(id_ficha);
     const idUsuarioResponsable = Number(id_usuario_responsable);
     const producedQuantity = normalizeProducedQuantity(cantidad_producida);

@@ -18,3 +18,8 @@ export const updateRol = async (id_rol, rol) => {
 export const deleteRol = async (id) => {
   return api.delete(`/roles/${id}`);
 };
+
+/** Activa o inactiva (PATCH /roles/:id/estado); devuelve el registro actualizado. */
+export const cambiarEstadoRol = async (id, estado) => {
+  return api.patch(`/roles/${id}/estado`, { estado });
+};

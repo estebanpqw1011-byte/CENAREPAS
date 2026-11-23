@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ShoppingCart, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { ShoppingCart, CheckCircle, XCircle, DollarSign, ExternalLink, Download } from 'lucide-react';
 import { useCompras } from '../hooks/useCompras';
 import { getProveedores } from '../../proveedores/services/proveedoresService';
+import { getSoporteCompra } from '../services/comprasService';
 import { getUsuarios } from '../../usuarios/services/usuariosService';
 import { DataTable } from '../../../shared/components/DataTable';
 import { RowActions } from '../../../shared/components/RowActions';
@@ -13,6 +14,66 @@ import { MetricCard } from '../../../shared/components/MetricCard';
 import { usePermissions } from '../../../shared/contexts/PermissionContext';
 import StatusSwitch from '../../../shared/components/StatusSwitch';
 import { CustomSelect } from '../../../shared/components/CustomSelect';
+import ErrorBanner from '../../../shared/components/ErrorBanner';
+import { exportToPdf } from '../../../shared/utils/exportToPdf';
+import { exportToExcel } from '../../../shared/utils/exportToExcel';
+
+/**
+ * Abre o descarga el soporte de una compra. El enlace se pide al hacer clic:
+ * las facturas son privadas (enlace temporal o archivo con la sesión).
+ */
+function SoporteCompra({ compra }) {
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
+
+  const usar = async (descargar) => {
+    setError('');
+    // La ventana se abre antes de esperar al servidor para que el navegador no la bloquee.
+    const ventana = descargar ? null : window.open('', '_blank');
+    setCargando(true);
+    try {
+      const { url, local } = await getSoporteCompra(compra.id_compra);
+      if (!url) throw new Error('No se encontró el soporte');
+      if (descargar) {
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = `soporte-compra-${compra.id_compra}`;
+        enlace.rel = 'noopener';
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+      } else if (ventana) {
+        ventana.opener = null;
+        ventana.location.href = url;
+      } else {
+        window.open(url, '_blank', 'noopener');
+      }
+      if (local) setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      ventana?.close();
+      setError(err.message || 'No se pudo abrir el soporte');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const boton = 'inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-50';
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={boton} disabled={cargando} onClick={() => usar(false)}>
+          <ExternalLink className="size-3.5" />
+          Abrir
+        </button>
+        <button type="button" className={boton} disabled={cargando} onClick={() => usar(true)}>
+          <Download className="size-3.5" />
+          Descargar
+        </button>
+      </div>
+      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
 
 export default function ComprasPage() {
   const { can } = usePermissions();
@@ -28,10 +89,18 @@ export default function ComprasPage() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
+    isLoading,
+    loadError,
+    refetch,
     handleSave,
     handleAnular,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   } = useCompras();
 
   const [selectedCompra, setSelectedCompra] = useState(null);
@@ -60,10 +129,10 @@ export default function ComprasPage() {
 
   const totalCompras = rawCompras.length;
   const recibidas = rawCompras.filter(
-    (c) => String(c.estado).toLowerCase() === 'recibida' || String(c.estado).toLowerCase() === 'activo'
+    (c) => String(c.estado).toLowerCase() === 'registrada'
   ).length;
-  const pendientes = rawCompras.filter(
-    (c) => String(c.estado).toLowerCase() === 'pendiente'
+  const anuladas = rawCompras.filter(
+    (c) => String(c.estado).toLowerCase() === 'anulada'
   ).length;
   const totalInvertido = rawCompras.reduce(
     (acc, c) => acc + (c.totalNum || c.valor_total || 0),
@@ -132,7 +201,13 @@ export default function ComprasPage() {
       {
         key: 'estado',
         label: 'Estado',
-        render: (value) => <StatusSwitch value={value} />,
+        render: (value, compra) => (
+          <StatusSwitch
+            value={value}
+            disabled={!can('compras', 'cambiar_estado')}
+            onToggle={() => handleRequestStatusChange(compra)}
+          />
+        ),
       },
       {
         key: 'acciones',
@@ -167,8 +242,55 @@ export default function ComprasPage() {
         },
       },
     ],
-    [can, setDetailModal, setShowModal, setDeleteDialog]
+    [can, setDetailModal, setShowModal, setDeleteDialog, handleRequestStatusChange]
   );
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      data: filteredData,
+      columns: [
+        { header: 'ID', key: 'id_compra' },
+        { header: 'Fecha Compra', key: 'fecha_compra' },
+        {
+          header: 'Proveedor',
+          accessor: (c) => proveedoresNames[c.id_proveedor] || `Proveedor #${c.id_proveedor}`,
+        },
+        {
+          header: 'Valor Total',
+          accessor: (c) => `$${Number(c.valor_total || 0).toLocaleString('es-CO')}`,
+        },
+        { header: 'Medio de Pago', key: 'medio_pago' },
+        { header: 'Estado', key: 'estado' },
+      ],
+      title: 'Reporte de Órdenes de Compra',
+      subtitle: 'Histórico de adquisiciones de materias primas a proveedores en CENAREPAS',
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      data: filteredData,
+      columns: [
+        { header: 'ID Compra', key: 'id_compra', align: 'center' },
+        { header: 'Fecha de Compra', key: 'fecha_compra', align: 'center' },
+        {
+          header: 'Proveedor',
+          accessor: (c) => proveedoresNames[c.id_proveedor] || `Proveedor #${c.id_proveedor}`,
+        },
+        {
+          header: 'Valor Total ($)',
+          accessor: (c) => `$${Number(c.valor_total || 0).toLocaleString('es-CO')}`,
+          align: 'right',
+        },
+        { header: 'Medio de Pago', key: 'medio_pago' },
+        { header: 'Estado', key: 'estado', align: 'center' },
+        { header: 'Soporte', accessor: (c) => (c.comprobante_public_id || c.comprobante_url ? 'Adjunto' : 'Sin soporte') },
+      ],
+      title: 'Reporte de Órdenes de Compra',
+      subtitle: 'Histórico de adquisiciones de materias primas a proveedores en CENAREPAS',
+      sheetName: 'Compras',
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -181,20 +303,25 @@ export default function ComprasPage() {
           setSelectedCompra(null);
           setShowModal(true);
         }}
+        onExportPdf={handleExportPdf}
+        onExportExcel={handleExportExcel}
       />
 
       {/* Tarjetas de Consolidado */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
         <MetricCard index={0} title="Total Compras" value={totalCompras} icon={ShoppingCart} variant="primary" />
-        <MetricCard index={1} title="Recibidas" value={recibidas} icon={CheckCircle} variant="success" />
-        <MetricCard index={2} title="Pendientes" value={pendientes} icon={Clock} variant="warning" />
+        <MetricCard index={1} title="Registradas" value={recibidas} icon={CheckCircle} variant="success" />
+        <MetricCard index={2} title="Anuladas" value={anuladas} icon={XCircle} variant="destructive" />
         <MetricCard index={3} title="Total Invertido" value={`$${totalInvertido.toLocaleString('es-CO')}`} icon={DollarSign} variant="accent" />
       </div>
+
+      <ErrorBanner message={loadError} onRetry={refetch} />
 
       {/* Tabla con DataTable */}
       <DataTable
         columns={columns}
         data={filteredData}
+        isLoading={isLoading}
         emptyIcon={ShoppingCart}
         entityName="compras"
         onAdd={() => {
@@ -214,8 +341,7 @@ export default function ComprasPage() {
             className="w-full sm:w-52"
           >
             <option value="Todos">Todos los estados</option>
-            <option value="Recibida">Recibida</option>
-            <option value="Pendiente">Pendiente</option>
+            <option value="Registrada">Registrada</option>
             <option value="Anulada">Anulada</option>
           </CustomSelect>
         }
@@ -238,7 +364,7 @@ export default function ComprasPage() {
               <div className="space-y-1 mt-1 text-left w-full">
                 {(detailModal.data.detalles || []).map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-border/40 last:border-0">
-                    <span className="font-medium text-foreground">{item.nombre_insumo || `Insumo #${item.id_insumo}`}</span>
+                    <span className="font-medium text-foreground">{item.insumo_nombre || `Insumo #${item.id_insumo}`}</span>
                     <span className="text-muted-foreground">{item.cantidad} {item.unidad_medida || 'kg'} x ${Number(item.valor_unitario).toLocaleString('es-CO')} = <strong className="text-primary">${Number(item.subtotal).toLocaleString('es-CO')}</strong></span>
                   </div>
                 ))}
@@ -247,15 +373,8 @@ export default function ComprasPage() {
           },
           {
             label: 'Comprobante / Factura',
-            value: detailModal.data.comprobante_url ? (
-              <a
-                href={detailModal.data.comprobante_url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-primary hover:underline font-medium text-xs inline-flex items-center gap-1"
-              >
-                Ver comprobante adjunto
-              </a>
+            value: detailModal.data.comprobante_public_id || detailModal.data.comprobante_url ? (
+              <SoporteCompra compra={detailModal.data} />
             ) : (
               'Sin comprobante adjunto'
             ),
@@ -284,6 +403,19 @@ export default function ComprasPage() {
         onConfirm={handleAnular}
         onCancel={() => setDeleteDialog({ isOpen: false, id: null, nombre: '' })}
         isLoading={isDeleting}
+      />
+
+      {/* Modal de confirmación para Cambio de Estado */}
+      <ConfirmDialog
+        isOpen={statusDialog.isOpen}
+        title={`Cambiar Estado a ${statusDialog.nextEstado}`}
+        message={`¿Estás seguro de que deseas cambiar el estado de la compra #${statusDialog.compra?.id_compra} de ${statusDialog.compra?.estado || 'Registrada'} a ${statusDialog.nextEstado}?`}
+        confirmText={`Cambiar a ${statusDialog.nextEstado}`}
+        confirmVariant={statusDialog.nextEstado === 'Registrada' ? 'success' : 'warning'}
+        onConfirm={handleConfirmStatusChange}
+        onCancel={() => setStatusDialog({ isOpen: false, compra: null, nextEstado: 'Registrada' })}
+        isLoading={isUpdatingStatus}
+        loadingText="Cambiando estado…"
       />
     </div>
   );

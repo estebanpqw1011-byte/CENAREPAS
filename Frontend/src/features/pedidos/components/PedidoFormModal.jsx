@@ -1,24 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Trash2, ShoppingBag } from 'lucide-react';
-import { getClientes } from '../../clientes/services/clientesService';
-import { getProductos } from '../../productos/services/productosService';
+import { Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { Combobox } from '../../../shared/ui/Combobox';
-
-const SEDES_DEFAULT = [
-  { id_sede: 1, nombre: 'Sede Principal (Ibagué)' },
-  { id_sede: 2, nombre: 'Sede Espinal' },
-  { id_sede: 3, nombre: 'Sede Girardot' },
-];
+import { StepperModal } from '../../../shared/components/StepperModal';
+import { getOpciones, getOpcionesComo, conValorActual } from '../../../shared/services/opciones';
 
 export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoading = false }) {
   const [idCliente, setIdCliente] = useState('1');
   const [idSede, setIdSede] = useState('1');
   const [fechaEntrega, setFechaEntrega] = useState('');
-  const [estado, setEstado] = useState('pendiente');
+  const [estado, setEstado] = useState('Pendiente');
   const [observaciones, setObservaciones] = useState('');
 
   // Catálogos
   const [clientes, setClientes] = useState([]);
+  const [sedes, setSedes] = useState([]);
+  const [estados, setEstados] = useState([]);
   const [availableProductos, setAvailableProductos] = useState([]);
 
   // Detalle de Pedido (detalle_pedido)
@@ -27,11 +23,20 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
   const [cantidadProducto, setCantidadProducto] = useState('');
   const [precioUnitario, setPrecioUnitario] = useState('');
 
+  // Errores de validación
+  const [errors, setErrors] = useState({});
+
   useEffect(() => {
-    getClientes().then((data) => {
+    getOpcionesComo('clientes', 'id_cliente').then((data) => {
       if (Array.isArray(data)) setClientes(data);
     }).catch(() => {});
-    getProductos().then((data) => {
+    getOpcionesComo('sedes', 'id_sede').then((data) => {
+      if (Array.isArray(data)) setSedes(data);
+    }).catch(() => {});
+    getOpciones('estados-pedido').then((data) => {
+      if (Array.isArray(data)) setEstados(data);
+    }).catch(() => {});
+    getOpcionesComo('productos', 'id_producto').then((data) => {
       if (Array.isArray(data)) setAvailableProductos(data);
     }).catch(() => {});
   }, []);
@@ -48,51 +53,55 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
     }
   }, [selectedProductoId, availableProductos]);
 
-  useEffect(() => {
-    if (pedido) {
-      setIdCliente(pedido.id_cliente ? String(pedido.id_cliente) : '1');
-      setIdSede(pedido.id_sede ? String(pedido.id_sede) : '1');
-      setFechaEntrega(pedido.fecha_entrega || '');
-      setEstado(pedido.estado || 'pendiente');
-      setObservaciones(pedido.observaciones || '');
+  const [currentStep, setCurrentStep] = useState(0);
 
-      // Cargar detalles existentes
-      if (Array.isArray(pedido.detalles) && pedido.detalles.length > 0) {
-        setDetalles(
-          pedido.detalles.map((d) => {
-            const prod = availableProductos.find((p) => p.id_producto === d.id_producto);
-            return {
-              id_producto: d.id_producto,
-              nombre_producto: prod?.nombre || d.nombre_producto || `Producto #${d.id_producto}`,
-              cantidad: Number(d.cantidad) || 0,
-              precio_unitario: Number(d.precio_unitario) || 0,
-              subtotal: Number(d.subtotal) || Number(d.cantidad) * Number(d.precio_unitario),
-            };
-          })
-        );
+  useEffect(() => {
+    if (open) {
+      setCurrentStep(0);
+      if (pedido) {
+        setIdCliente(pedido.id_cliente ? String(pedido.id_cliente) : (clientes[0]?.id_cliente ? String(clientes[0].id_cliente) : '1'));
+        setIdSede(pedido.id_sede ? String(pedido.id_sede) : (sedes[0]?.id_sede ? String(sedes[0].id_sede) : '1'));
+        setFechaEntrega(pedido.fecha_entrega || '');
+        setEstado(pedido.estado || 'Pendiente');
+        setObservaciones(pedido.observaciones || '');
+
+        if (Array.isArray(pedido.detalles) && pedido.detalles.length > 0) {
+          setDetalles(
+            pedido.detalles.map((d) => {
+              const prod = availableProductos.find((p) => p.id_producto === d.id_producto);
+              return {
+                id_producto: d.id_producto,
+                nombre_producto: prod?.nombre || d.nombre_producto || `Producto #${d.id_producto}`,
+                cantidad: Number(d.cantidad) || 0,
+                precio_unitario: Number(d.precio_unitario) || 0,
+                subtotal: Number(d.subtotal) || Number(d.cantidad) * Number(d.precio_unitario),
+              };
+            })
+          );
+        } else {
+          setDetalles([]);
+        }
       } else {
+        setIdCliente(clientes[0]?.id_cliente ? String(clientes[0].id_cliente) : '1');
+        setIdSede(sedes[0]?.id_sede ? String(sedes[0].id_sede) : '1');
+        setFechaEntrega('');
+        setEstado('Pendiente');
+        setObservaciones('');
         setDetalles([]);
       }
+      setSelectedProductoId('');
+      setCantidadProducto('');
+      setPrecioUnitario('');
+      setErrors({});
     } else {
-      setIdCliente(clientes[0]?.id_cliente ? String(clientes[0].id_cliente) : '1');
-      setIdSede('1');
-      setFechaEntrega('');
-      setEstado('pendiente');
-      setObservaciones('');
-      setDetalles([]);
+      setCurrentStep(0);
     }
-    setSelectedProductoId('');
-    setCantidadProducto('');
-    setPrecioUnitario('');
-  }, [pedido, open, clientes, availableProductos]);
-
+  }, [pedido, open, clientes, sedes, availableProductos]);
 
   // Cálculo automático del valor total
   const valorTotalCalculado = useMemo(() => {
     return detalles.reduce((acc, item) => acc + (Number(item.subtotal) || 0), 0);
   }, [detalles]);
-
-  if (!open) return null;
 
   const handleAddDetalle = () => {
     if (!selectedProductoId || !cantidadProducto || Number(cantidadProducto) <= 0 || !precioUnitario || Number(precioUnitario) <= 0) {
@@ -132,16 +141,39 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
     setSelectedProductoId('');
     setCantidadProducto('');
     setPrecioUnitario('');
+    if (errors.detalles) {
+      setErrors((prev) => ({ ...prev, detalles: null }));
+    }
   };
 
   const handleRemoveDetalle = (idProductoToRemove) => {
     setDetalles(detalles.filter((d) => d.id_producto !== idProductoToRemove));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const validateStep1 = () => {
+    const errs = {};
+    if (!idCliente) errs.idCliente = 'Debes seleccionar un cliente';
+    if (!idSede) errs.idSede = 'Debes seleccionar una sede';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const errs = {};
     if (detalles.length === 0) {
-      alert('Debes agregar al menos un producto al pedido.');
+      errs.detalles = 'Debes agregar al menos un producto al pedido';
+    }
+    setErrors((prev) => ({ ...prev, ...errs }));
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (!validateStep1()) {
+      setCurrentStep(0);
+      return;
+    }
+    if (!validateStep2()) {
+      setCurrentStep(1);
       return;
     }
 
@@ -150,7 +182,7 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
           ...pedido,
           id_cliente: Number(idCliente) || 1,
           id_sede: Number(idSede) || 1,
-          id_usuario: pedido.id_usuario || 1, // Asignado por contexto
+          id_usuario: pedido.id_usuario || 1,
           fecha_entrega: fechaEntrega || null,
           valor_total: valorTotalCalculado,
           estado,
@@ -161,10 +193,10 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
       : {
           id_cliente: Number(idCliente) || 1,
           id_sede: Number(idSede) || 1,
-          id_usuario: 1, // Asignado por contexto de sesión activa
+          id_usuario: 1,
           fecha_entrega: fechaEntrega || null,
           valor_total: valorTotalCalculado,
-          estado: estado || 'pendiente',
+          estado: estado || 'Pendiente',
           observaciones: observaciones.trim() || null,
           motivo_anulacion: null,
           detalles,
@@ -177,94 +209,130 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-      <div className="form-modal-panel bg-card text-card-foreground p-6 rounded-xl max-w-2xl w-full border border-border shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar animate-in fade-in-50 zoom-in-95 duration-200">
-        <div className="flex items-start justify-between gap-4 pb-2 border-b border-border">
-          <div>
-            <h2 className="text-xl font-bold">{pedido ? 'Editar Pedido' : 'Nuevo Pedido de Cliente'}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Programa órdenes de despacho y cantidades solicitadas por clientes
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Cerrar formulario"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="modal-form-grid space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="pedido_id_cliente" className="block mb-1.5 text-sm font-medium">Cliente *</label>
+  const steps = [
+    {
+      id: 'datos',
+      title: 'Información del Pedido',
+      description: 'Selecciona el cliente, sede de entrega, estado y observaciones',
+      validate: validateStep1,
+      content: (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
+            {/* Cliente */}
+            <div className="sm:col-span-1">
+              <label htmlFor="pedido_id_cliente" className="block mb-1.5 text-xs sm:text-sm font-bold text-foreground">
+                Cliente Solicitante <span className="text-destructive font-bold ml-0.5">*</span>
+              </label>
               <Combobox
                 id="pedido_id_cliente"
                 name="id_cliente"
                 value={idCliente}
-                onChange={(e) => setIdCliente(e.target.value)}
-                options={clientes.map((c) => ({
+                onChange={(e) => {
+                  setIdCliente(e.target.value);
+                  if (errors.idCliente) setErrors((prev) => ({ ...prev, idCliente: null }));
+                }}
+                options={conValorActual(clientes, 'id_cliente', pedido?.id_cliente, pedido?.cliente_nombre).map((c) => ({
                   value: String(c.id_cliente),
                   label: c.nombre,
                 }))}
               />
+              {errors.idCliente && <p className="text-xs text-destructive mt-1">{errors.idCliente}</p>}
             </div>
-            <div>
-              <label htmlFor="pedido_id_sede" className="block mb-1.5 text-sm font-medium">Sede de Despacho *</label>
+
+            {/* Sede */}
+            <div className="sm:col-span-1">
+              <label htmlFor="pedido_id_sede" className="block mb-1.5 text-xs sm:text-sm font-bold text-foreground">
+                Sede de Despacho <span className="text-destructive font-bold ml-0.5">*</span>
+              </label>
               <Combobox
                 id="pedido_id_sede"
                 name="id_sede"
                 value={idSede}
-                onChange={(e) => setIdSede(e.target.value)}
-                options={SEDES_DEFAULT.map((s) => ({
+                onChange={(e) => {
+                  setIdSede(e.target.value);
+                  if (errors.idSede) setErrors((prev) => ({ ...prev, idSede: null }));
+                }}
+                options={conValorActual(sedes, 'id_sede', pedido?.id_sede, pedido?.sede_nombre).map((s) => ({
                   value: String(s.id_sede),
                   label: s.nombre,
                 }))}
               />
+              {errors.idSede && <p className="text-xs text-destructive mt-1">{errors.idSede}</p>}
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="pedido_fecha_entrega" className="block mb-1.5 text-sm font-medium">Fecha Estimada de Entrega</label>
+            {/* Fecha entrega */}
+            <div className="sm:col-span-1">
+              <label htmlFor="pedido_fecha_entrega" className="block mb-1.5 text-xs sm:text-sm font-bold text-foreground">
+                Fecha Estimada de Entrega
+              </label>
               <input
                 id="pedido_fecha_entrega"
                 name="fecha_entrega"
                 type="date"
                 value={fechaEntrega}
                 onChange={(e) => setFechaEntrega(e.target.value)}
-                className="w-full px-4 py-2 border border-input bg-input-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full h-10 px-3.5 border border-border bg-input-background rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
-            <div>
-              <label htmlFor="pedido_estado" className="block mb-1.5 text-sm font-medium">Estado del Pedido</label>
+
+            {/* Estado */}
+            <div className="sm:col-span-1">
+              <label htmlFor="pedido_estado" className="block mb-1.5 text-xs sm:text-sm font-bold text-foreground">
+                Estado del Pedido <span className="text-destructive font-bold ml-0.5">*</span>
+              </label>
               <Combobox
                 id="pedido_estado"
                 name="estado"
                 value={estado}
                 onChange={(e) => setEstado(e.target.value)}
-                options={[
-                  { value: 'pendiente', label: 'Pendiente' },
-                  { value: 'en camino', label: 'En Camino' },
-                  { value: 'entregado', label: 'Entregado' },
-                  { value: 'cancelado', label: 'Cancelado' },
-                ]}
+                // Estados reales del pedido (GET /opciones/estados-pedido); el actual siempre aparece.
+                options={(estados.some((e) => e.id === estado) || !estado ? estados : [...estados, { id: estado, nombre: estado }])
+                  .map((e) => ({ value: e.id, label: e.nombre }))}
+              />
+            </div>
+
+            {/* Observaciones */}
+            <div className="sm:col-span-2">
+              <label htmlFor="pedido_observaciones" className="block mb-1.5 text-xs sm:text-sm font-bold text-foreground">
+                Instrucciones u Observaciones de Despacho
+              </label>
+              <textarea
+                id="pedido_observaciones"
+                name="observaciones"
+                maxLength={255}
+                rows={2}
+                placeholder="Instrucciones para despacho, horario de recepción o empaque..."
+                value={observaciones}
+                onChange={(e) => setObservaciones(e.target.value)}
+                className="w-full p-3 min-h-[56px] border border-border bg-input-background rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
               />
             </div>
           </div>
 
-          {/* Sección Detalle de Pedido (detalle_pedido) */}
-          <div className="modal-field-wide space-y-3 p-4 rounded-xl border border-border bg-muted/20">
+          <div className="p-3.5 bg-muted/40 border border-border/60 rounded-xl text-xs text-muted-foreground flex items-start gap-2.5">
+            <ShoppingBag className="size-4 text-primary shrink-0 mt-0.5" />
+            <p>
+              Asegúrate de confirmar la sede de despacho correcta para calcular rutas y disponibilidad de inventario terminado.
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'productos',
+      title: 'Productos Solicitados',
+      description: 'Selecciona los productos terminados, cantidades y valida el precio pactado',
+      validate: validateStep2,
+      content: (
+        <div className="space-y-4">
+          <div className="space-y-3 p-4 rounded-xl border border-border bg-muted/20">
             <div>
-              <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                <ShoppingBag className="w-4 h-4 text-primary" />
-                Productos Solicitados (Detalle del Pedido)
+              <h4 className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-1.5">
+                <ShoppingBag className="size-4 text-primary" />
+                Agregar Producto al Pedido
               </h4>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Selecciona los productos terminados, cantidades y valida el precio unitario
+                Selecciona el producto terminado y valida la cantidad solicitada
               </p>
             </div>
 
@@ -295,7 +363,7 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
                   placeholder="Cantidad (und)"
                   value={cantidadProducto}
                   onChange={(e) => setCantidadProducto(e.target.value)}
-                  className="w-full px-3 py-2 border border-input bg-input-background rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full h-10 px-3 border border-border bg-input-background rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 font-mono"
                 />
               </div>
 
@@ -308,7 +376,7 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
                   placeholder="Precio Unitario ($)"
                   value={precioUnitario}
                   onChange={(e) => setPrecioUnitario(e.target.value)}
-                  className="w-full px-3 py-2 border border-input bg-input-background rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full h-10 px-3 border border-border bg-input-background rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 font-mono"
                 />
               </div>
 
@@ -317,18 +385,18 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
                   type="button"
                   onClick={handleAddDetalle}
                   disabled={!selectedProductoId || !cantidadProducto || !precioUnitario}
-                  className="w-full h-full py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 text-xs font-semibold flex items-center justify-center transition-opacity cursor-pointer"
+                  className="w-full h-10 bg-primary text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-50 text-xs font-semibold flex items-center justify-center transition-opacity cursor-pointer shadow-xs"
                   title="Agregar producto al pedido"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="size-4" />
                 </button>
               </div>
             </div>
 
             {/* Listado de productos agregados */}
             {detalles.length > 0 ? (
-              <div className="divide-y divide-border border border-border rounded-lg bg-card overflow-hidden">
-                <div className="grid grid-cols-12 gap-2 p-2 bg-muted/60 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <div className="divide-y divide-border border border-border rounded-xl bg-card overflow-hidden max-h-44 overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-12 gap-2 p-2 bg-muted/60 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 bg-card">
                   <div className="col-span-5">Producto</div>
                   <div className="col-span-2 text-center">Cant.</div>
                   <div className="col-span-2 text-right">P. Unitario</div>
@@ -353,64 +421,52 @@ export function PedidoFormModal({ open, onClose, pedido = null, onSave, isLoadin
                       <button
                         type="button"
                         onClick={() => handleRemoveDetalle(d.id_producto)}
-                        className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors"
+                        className="text-muted-foreground hover:text-destructive p-1 rounded-md transition-colors cursor-pointer"
                         title="Eliminar producto"
                       >
-                        <Trash2 className="w-3.5 h-3.5 mx-auto" />
+                        <Trash2 className="size-3.5 mx-auto" />
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-3 border border-dashed border-border rounded-lg text-xs text-muted-foreground">
+              <div className="text-center py-3 border border-dashed border-border rounded-xl text-xs text-muted-foreground">
                 No hay productos agregados en este pedido.
               </div>
             )}
-          </div>
-
-          <div className="modal-field-wide">
-            <label htmlFor="pedido_observaciones" className="block mb-1.5 text-sm font-medium">Observaciones de Entrega</label>
-            <textarea
-              id="pedido_observaciones"
-              name="observaciones"
-              maxLength={255}
-              rows={2}
-              placeholder="Instrucciones para despacho, horario de recepción o empaque..."
-              value={observaciones}
-              onChange={(e) => setObservaciones(e.target.value)}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+            {errors.detalles && <p className="text-xs text-destructive">{errors.detalles}</p>}
           </div>
 
           {/* Campo Calculado: Valor Total */}
           <div className="flex items-center justify-between p-3.5 rounded-xl bg-primary/10 border border-primary/20">
-            <span className="text-sm font-semibold text-foreground">Valor Total del Pedido (Calculado):</span>
-            <span className="text-lg font-bold font-mono text-primary">
+            <span className="text-xs sm:text-sm font-semibold text-foreground">Valor Total del Pedido:</span>
+            <span className="text-base sm:text-lg font-bold font-mono text-primary">
               ${valorTotalCalculado.toLocaleString('es-CO')}
             </span>
           </div>
+        </div>
+      ),
+    },
+  ];
 
-          <div className="flex gap-2 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-muted text-sm font-medium transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 text-sm font-medium transition-colors shadow-xs cursor-pointer"
-            >
-              {isLoading ? 'Guardando...' : pedido ? 'Guardar Cambios' : 'Crear Pedido'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+  return (
+    <StepperModal
+      isOpen={open}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      category="Pedidos"
+      title={pedido ? 'Editar Pedido' : 'Nuevo Pedido de Cliente'}
+      subtitle="Programa órdenes de despacho y cantidades solicitadas por clientes"
+      steps={steps}
+      currentStep={currentStep}
+      onStepChange={setCurrentStep}
+      submitLabel={pedido ? 'Guardar Cambios' : 'Crear Pedido'}
+      isLoading={isLoading}
+      isDirty={detalles.length > 0 || Boolean(observaciones)}
+    />
   );
 }
+
+export default PedidoFormModal;
 

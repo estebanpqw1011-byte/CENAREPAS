@@ -11,6 +11,9 @@ import { MetricCard } from '../../../shared/components/MetricCard';
 import { usePermissions } from '../../../shared/contexts/PermissionContext';
 import StatusSwitch from '../../../shared/components/StatusSwitch';
 import { CustomSelect } from '../../../shared/components/CustomSelect';
+import ErrorBanner from '../../../shared/components/ErrorBanner';
+import { exportToPdf } from '../../../shared/utils/exportToPdf';
+import { exportToExcel } from '../../../shared/utils/exportToExcel';
 
 export default function FichasTecnicasPage() {
   const { can } = usePermissions();
@@ -26,30 +29,27 @@ export default function FichasTecnicasPage() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
     isLoading,
-    hasLoadError,
+    loadError,
+    refetch,
     handleSave,
     handleDelete,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   } = useFichasTecnicas();
 
   const [selectedFicha, setSelectedFicha] = useState(null);
 
   const getFichaInsumosList = (ficha) => {
-    if (!ficha) return [];
-    if (!Array.isArray(ficha.insumos)) return [];
-    return ficha.insumos.map((item) => ({
-      ...item,
-      nombre: item.insumo_nombre || '—',
-    }));
+    return Array.isArray(ficha?.insumos) ? ficha.insumos : [];
   };
 
   const totalFichas = rawFichas.length;
-  const totalInsumos = rawFichas.reduce(
-    (total, ficha) => total + (Array.isArray(ficha.insumos) ? ficha.insumos.length : 0),
-    0
-  );
   const vigentes = rawFichas.filter(
     (f) => String(f.estado).toLowerCase() === 'vigente' || String(f.estado).toLowerCase() === 'activo'
   ).length;
@@ -99,7 +99,13 @@ export default function FichasTecnicasPage() {
       {
         key: 'estado',
         label: 'Estado',
-        render: (value) => <StatusSwitch value={value} />,
+        render: (value, ficha) => (
+          <StatusSwitch
+            value={value}
+            disabled={!can('fichas-tecnicas', 'cambiar_estado')}
+            onToggle={() => handleRequestStatusChange(ficha)}
+          />
+        ),
       },
       {
         key: 'acciones',
@@ -119,13 +125,59 @@ export default function FichasTecnicasPage() {
                 nombre: ficha.nombre,
               })
             }
-            deleteDisabled={!can('fichas-tecnicas', 'eliminar')}
+            deleteDisabled={!can('fichas-tecnicas', 'cambiar_estado')}
           />
         ),
       },
     ],
-    [can, setDetailModal, setShowModal, setDeleteDialog]
+    [can, setDetailModal, setShowModal, setDeleteDialog, handleRequestStatusChange]
   );
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      data: filteredData,
+      columns: [
+        { header: 'ID', key: 'id_ficha' },
+        { header: 'Nombre Receta', key: 'nombre' },
+        {
+          header: 'Rendimiento',
+          accessor: (f) => `${f.rendimiento_lote || 0} und/lote`,
+        },
+        {
+          header: 'Tiempo Prep.',
+          accessor: (f) => `${f.tiempo_estimado_minutos || 0} min`,
+        },
+        { header: 'Estado', key: 'estado' },
+      ],
+      title: 'Reporte de Fichas Técnicas (Recetas)',
+      subtitle: 'Estándares de producción, tiempos y formulaciones en CENAREPAS',
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      data: filteredData,
+      columns: [
+        { header: 'ID', key: 'id_ficha', align: 'center' },
+        { header: 'Nombre de la Receta', key: 'nombre' },
+        {
+          header: 'Rendimiento por Lote',
+          accessor: (f) => `${f.rendimiento_lote || 0} und`,
+          align: 'right',
+        },
+        {
+          header: 'Tiempo Estimado (min)',
+          accessor: (f) => f.tiempo_estimado_minutos || 0,
+          align: 'right',
+        },
+        { header: 'Descripción', key: 'descripcion' },
+        { header: 'Estado', key: 'estado', align: 'center' },
+      ],
+      title: 'Reporte de Fichas Técnicas (Recetas)',
+      subtitle: 'Estándares de producción, tiempos y formulaciones en CENAREPAS',
+      sheetName: 'Fichas_Tecnicas',
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -138,20 +190,25 @@ export default function FichasTecnicasPage() {
           setSelectedFicha(null);
           setShowModal(true);
         }}
+        onExportPdf={handleExportPdf}
+        onExportExcel={handleExportExcel}
       />
 
       {/* Tarjetas de Consolidado */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard index={0} title="Total Recetas" value={isLoading || hasLoadError ? '—' : totalFichas} icon={BookOpen} variant="primary" />
-        <MetricCard index={1} title="Fichas Vigentes" value={isLoading || hasLoadError ? '—' : vigentes} icon={CheckCircle} variant="success" />
-        <MetricCard index={2} title="Insumos en recetas" value={isLoading || hasLoadError ? '—' : totalInsumos} icon={FileText} variant="accent" />
-        <MetricCard index={3} title="Última Revisión" value="—" icon={Clock} variant="warning" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
+        <MetricCard index={0} title="Total Recetas" value={totalFichas} icon={BookOpen} variant="primary" />
+        <MetricCard index={1} title="Fichas Vigentes" value={vigentes} icon={CheckCircle} variant="success" />
+        <MetricCard index={2} title="Versión Actual" value="v3.0 Max" icon={FileText} variant="accent" />
+        <MetricCard index={3} title="Última Revisión" value="Hace 15 días" icon={Clock} variant="warning" />
       </div>
+
+      <ErrorBanner message={loadError} onRetry={refetch} />
 
       {/* Tabla con DataTable */}
       <DataTable
         columns={columns}
         data={filteredData}
+        isLoading={isLoading}
         emptyIcon={BookOpen}
         entityName="fichas técnicas"
         onAdd={() => {
@@ -185,9 +242,8 @@ export default function FichasTecnicasPage() {
           { label: 'Código Receta', value: `#${detailModal.data.id_ficha}` },
           { label: 'Nombre', value: detailModal.data.nombre },
           { label: 'Descripción', value: detailModal.data.descripcion || 'N/A' },
-          { label: 'Instrucciones de Preparación', value: detailModal.data.instrucciones_preparacion || 'N/A' },
-          { label: 'Tiempo Estimado', value: `${detailModal.data.tiempo_estimado_minutos} min` },
           { label: 'Rendimiento por Lote', value: `${detailModal.data.rendimiento_lote} und` },
+          { label: 'Tiempo Estimado', value: `${detailModal.data.tiempo_estimado_minutos} min` },
           {
             label: 'Insumos Requeridos',
             value: (() => {
@@ -197,7 +253,7 @@ export default function FichasTecnicasPage() {
                 <div className="space-y-1 w-full text-left">
                   {list.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between gap-3 text-xs bg-card p-1.5 rounded border border-border/50">
-                      <span className="font-medium text-foreground">{item.nombre}</span>
+                      <span className="font-medium text-foreground">{item.insumo_nombre}</span>
                       <span className="font-semibold text-primary px-2 py-0.5 bg-primary/10 rounded">
                         {item.cantidad} {item.unidad_medida}
                       </span>
@@ -207,6 +263,7 @@ export default function FichasTecnicasPage() {
               );
             })(),
           },
+          { label: 'Instrucciones de Preparación', value: detailModal.data.instrucciones_preparacion || 'N/A' },
           { label: 'Estado', value: detailModal.data.estado },
         ] : []}
       />
@@ -224,12 +281,25 @@ export default function FichasTecnicasPage() {
 
       <ConfirmDialog
         isOpen={deleteDialog.isOpen}
-        title="Eliminar Ficha Técnica"
-        message={`¿Estás seguro de que deseas eliminar la ficha técnica "${deleteDialog.nombre}"? Esta acción no se puede deshacer.`}
-        confirmText="Eliminar"
+        title="Inactivar Ficha Técnica"
+        message={`¿Estás seguro de que deseas inactivar la ficha técnica "${deleteDialog.nombre}"? Podrás activarla de nuevo después.`}
+        confirmText="Inactivar"
         onConfirm={handleDelete}
         onCancel={() => setDeleteDialog({ isOpen: false, id: null, nombre: '' })}
         isLoading={isDeleting}
+      />
+
+      {/* Modal de confirmación para Cambio de Estado */}
+      <ConfirmDialog
+        isOpen={statusDialog.isOpen}
+        title={`Cambiar Estado a ${statusDialog.nextEstado}`}
+        message={`¿Estás seguro de que deseas cambiar el estado de la receta "${statusDialog.ficha?.nombre}" de ${statusDialog.ficha?.estado || 'Vigente'} a ${statusDialog.nextEstado}?`}
+        confirmText={`Cambiar a ${statusDialog.nextEstado}`}
+        confirmVariant={statusDialog.nextEstado === 'Activo' ? 'success' : 'warning'}
+        onConfirm={handleConfirmStatusChange}
+        onCancel={() => setStatusDialog({ isOpen: false, ficha: null, nextEstado: 'Activo' })}
+        isLoading={isUpdatingStatus}
+        loadingText="Cambiando estado…"
       />
     </div>
   );

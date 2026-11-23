@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useMemo, useEffect } from 'react';
 import { Box, CheckCircle, AlertTriangle, DollarSign, Calendar } from 'lucide-react';
 import { useProductos } from '../hooks/useProductos';
 import { getCategorias } from '../../categorias/services/categoriasService';
@@ -9,14 +8,15 @@ import { ProductosTable } from '../components/ProductosTable';
 import { ProductoFormModal } from '../components/ProductoFormModal';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
 import DetailModal from '../../../shared/components/DetailModal';
+import MetricCard from '../../../shared/components/MetricCard';
 import PageHeader from '../../../shared/components/PageHeader';
 import { usePermissions } from '../../../shared/contexts/PermissionContext';
 import StatusSwitch from '../../../shared/components/StatusSwitch';
 import { CustomSelect } from '../../../shared/components/CustomSelect';
-import { formatDate } from '../../../shared/utils/formatDate';
-
-const hasNumericValue = (value) =>
-  value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
+import ErrorBanner from '../../../shared/components/ErrorBanner';
+import { getImageUrl } from '../../../shared/services/api';
+import { exportToPdf } from '../../../shared/utils/exportToPdf';
+import { exportToExcel } from '../../../shared/utils/exportToExcel';
 
 export default function ProductosPage() {
   const { can } = usePermissions();
@@ -33,14 +33,20 @@ export default function ProductosPage() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
     isLoading,
-    hasLoadError,
+    loadError,
+    refetch,
     productos,
     filteredProductos,
     handleSave,
     handleDelete,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   } = useProductos();
 
   const [selectedProducto, setSelectedProducto] = useState(null);
@@ -81,30 +87,36 @@ export default function ProductosPage() {
     (p) => String(p.estado).toLowerCase() === 'disponible' || String(p.estado).toLowerCase() === 'activo'
   ).length;
   const bajoStock = productos.filter(
-    (p) => String(p.estado).toLowerCase() === 'bajo stock' ||
-      (hasNumericValue(p.stock_actual) && hasNumericValue(p.stock_minimo) &&
-        Number(p.stock_actual) <= Number(p.stock_minimo))
+    (p) => String(p.estado).toLowerCase() === 'bajo stock' || Number(p.stock_actual) <= Number(p.stock_minimo)
   ).length;
-  const hasCompleteInventoryValues = productos.every(
-    (p) => hasNumericValue(p.precio_venta) && hasNumericValue(p.stock_actual)
+  const valorInventario = productos.reduce(
+    (acc, p) => acc + Number(p.precio_venta || 0) * Number(p.stock_actual || 0),
+    0
   );
-  const valorInventario = hasCompleteInventoryValues
-    ? productos.reduce((acc, p) => acc + Number(p.precio_venta) * Number(p.stock_actual), 0)
-    : null;
 
-  const formatVencimiento = useCallback((dateStr) => {
-    const targetDate = formatDate(dateStr, { forInput: true });
-    if (!targetDate) {
-      return <span className="text-muted-foreground text-xs">—</span>;
+  const formatVencimiento = (dateStr) => {
+    if (!dateStr) {
+      return <span className="text-muted-foreground/80 text-xs font-medium select-none">N/A</span>;
     }
 
-    const todayDate = formatDate(new Date(), { forInput: true });
-    const toUtcDay = (value) => {
-      const [year, month, day] = value.split('-').map(Number);
-      return Date.UTC(year, month - 1, day);
-    };
-    const diffDays = Math.round((toUtcDay(targetDate) - toUtcDay(todayDate)) / (1000 * 60 * 60 * 24));
-    const formattedDate = formatDate(dateStr);
+    const expDate = new Date(dateStr);
+    if (isNaN(expDate.getTime())) {
+      return <span className="text-muted-foreground text-xs">{dateStr}</span>;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(expDate);
+    target.setHours(0, 0, 0, 0);
+
+    const diffTime = target.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    const formattedDate = target.toLocaleDateString('es-CO', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
 
     if (diffDays < 0) {
       return (
@@ -140,7 +152,7 @@ export default function ProductosPage() {
         </div>
       );
     }
-  }, []);
+  };
 
   const columns = useMemo(
     () => [
@@ -156,7 +168,7 @@ export default function ProductosPage() {
           <div className="w-12 h-12 rounded-lg bg-muted/60 border border-border overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
             {value ? (
               <img
-                src={value}
+                src={getImageUrl(value)}
                 alt={prod.nombre}
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -205,7 +217,7 @@ export default function ProductosPage() {
         label: 'Precio',
         render: (value) => (
           <span className="font-medium text-sm">
-            {hasNumericValue(value) ? `$${Number(value).toLocaleString('es-CO')}` : '—'}
+            ${Number(value || 0).toLocaleString('es-CO')}
           </span>
         ),
       },
@@ -213,12 +225,11 @@ export default function ProductosPage() {
         key: 'stock_actual',
         label: 'Stock',
         render: (value, prod) => {
-          const isLow = hasNumericValue(value) && hasNumericValue(prod.stock_minimo) &&
-            Number(value) <= Number(prod.stock_minimo);
+          const isLow = Number(value) <= Number(prod.stock_minimo || 0);
           return (
             <div className="flex items-center gap-1.5">
               <span className={`font-semibold text-sm ${isLow ? 'text-amber-600 dark:text-amber-400 font-bold' : ''}`}>
-                {hasNumericValue(value) ? value : '—'}
+                {value}
               </span>
               {isLow && (
                 <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] rounded font-semibold">
@@ -237,67 +248,98 @@ export default function ProductosPage() {
       {
         key: 'estado',
         label: 'Estado',
-        render: (value) => <StatusSwitch value={value} />,
+        render: (value, prod) => (
+          <StatusSwitch
+            value={value}
+            disabled={!can('productos', 'editar')}
+            onToggle={() => handleRequestStatusChange(prod)}
+          />
+        ),
       },
     ],
-    [categoryNames, formatVencimiento]
+    [categoryNames, handleRequestStatusChange, can]
   );
 
-  const kpiCards = [
-    { title: 'Total Productos', value: isLoading || hasLoadError ? '—' : totalProductos, icon: Box, iconStyle: 'bg-primary/10 text-primary' },
-    { title: 'Disponibles', value: isLoading || hasLoadError ? '—' : disponibles, icon: CheckCircle, iconStyle: 'bg-success/10 text-success' },
-    { title: 'Bajo Stock', value: isLoading || hasLoadError ? '—' : bajoStock, icon: AlertTriangle, iconStyle: 'bg-warning/10 text-warning' },
-    {
-      title: 'Valor Inventario',
-      value: isLoading || hasLoadError || valorInventario === null
-        ? '—'
-        : `$${valorInventario.toLocaleString('es-CO')}`,
-      icon: DollarSign,
-      iconStyle: 'bg-accent/10 text-primary',
-    },
-  ];
+  const handleExportPdf = () => {
+    exportToPdf({
+      data: filteredProductos,
+      columns: [
+        { header: 'ID', key: 'id_producto' },
+        { header: 'Producto', key: 'nombre' },
+        {
+          header: 'Categoría',
+          accessor: (p) =>
+            categoryNames[p.id_categoria] ||
+            (p.categoria_nombre || (p.id_categoria ? `Categoría #${p.id_categoria}` : 'Sin categoría')),
+        },
+        {
+          header: 'Precio Venta',
+          accessor: (p) => `$${Number(p.precio_venta || 0).toLocaleString('es-CO')}`,
+        },
+        { header: 'Stock Mínimo', key: 'stock_minimo' },
+        { header: 'Estado', key: 'estado' },
+      ],
+      title: 'Reporte de Productos Terminados',
+      subtitle: 'Catálogo y precios de productos terminados en CENAREPAS',
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      data: filteredProductos,
+      columns: [
+        { header: 'ID', key: 'id_producto', align: 'center' },
+        { header: 'Nombre del Producto', key: 'nombre' },
+        {
+          header: 'Categoría',
+          accessor: (p) =>
+            categoryNames[p.id_categoria] ||
+            (p.categoria_nombre || (p.id_categoria ? `Categoría #${p.id_categoria}` : 'Sin categoría')),
+        },
+        {
+          header: 'Precio de Venta',
+          accessor: (p) => `$${Number(p.precio_venta || 0).toLocaleString('es-CO')}`,
+          align: 'right',
+        },
+        { header: 'Stock Mínimo', key: 'stock_minimo', align: 'right' },
+        { header: 'Estado', key: 'estado', align: 'center' },
+      ],
+      title: 'Reporte de Productos Terminados',
+      subtitle: 'Catálogo y precios de productos terminados en CENAREPAS',
+      sheetName: 'Productos',
+    });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Productos Terminados"
-        subtitle="Catálogo y stock de arepas y derivados de Masarepas"
+        title="Productos"
+        subtitle="Catálogo de productos terminados de Masarepas"
         addLabel="Nuevo Producto"
         addDisabled={!can('productos', 'crear')}
         onAdd={() => {
           setSelectedProducto(null);
           setShowModal(true);
         }}
+        onExportPdf={handleExportPdf}
+        onExportExcel={handleExportExcel}
       />
 
-      {/* Tarjetas de Consolidado con animación en cascada, sombra sutil y elevación al hover */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        {kpiCards.map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <motion.div
-              key={card.title}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: idx * 0.08, ease: 'easeOut' }}
-              className="bg-card p-4 rounded-xl border border-border flex items-center gap-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-default"
-            >
-              <div className={`p-3 rounded-lg ${card.iconStyle} shrink-0 transition-transform duration-200`}>
-                <Icon className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{card.title}</p>
-                <h3 className="text-xl font-bold text-foreground">{card.value}</h3>
-              </div>
-            </motion.div>
-          );
-        })}
+      {/* Tarjetas de Consolidado */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
+        <MetricCard index={0} title="Total Productos" value={totalProductos} icon={Box} variant="primary" />
+        <MetricCard index={1} title="Disponibles" value={disponibles} icon={CheckCircle} variant="success" />
+        <MetricCard index={2} title="Bajo Stock" value={bajoStock} icon={AlertTriangle} variant="warning" />
+        <MetricCard index={3} title="Valor Inventario" value={`$${valorInventario.toLocaleString('es-CO')}`} icon={DollarSign} variant="accent" />
       </div>
+
+      <ErrorBanner message={loadError} onRetry={refetch} />
 
       {/* Tabla exclusiva de Productos con animaciones escalonadas y botones de acción circulares */}
       <ProductosTable
         columns={columns}
         data={filteredProductos}
+        isLoading={isLoading}
         emptyIcon={Box}
         entityName="productos"
         onAdd={() => {
@@ -319,7 +361,7 @@ export default function ProductosPage() {
             nombre: producto.nombre,
           })
         }
-        deleteDisabled={!can('productos', 'eliminar')}
+        deleteDisabled={!can('productos', 'cambiar_estado')}
         isFiltered={Boolean(searchTerm || filterCategoria !== 'Todas las categorías' || filterEstado !== 'Todos los estados')}
         searchPlaceholder="Buscar por código o producto..."
         searchValue={searchTerm}
@@ -365,7 +407,7 @@ export default function ProductosPage() {
                         value: (
                           <div className="w-24 h-24 rounded-lg overflow-hidden border border-border bg-muted/30 ml-auto">
                             <img
-                              src={detailModal.data.imagen_url}
+                              src={getImageUrl(detailModal.data.imagen_url)}
                               alt={detailModal.data.nombre}
                               className="w-full h-full object-cover"
                             />
@@ -383,21 +425,13 @@ export default function ProductosPage() {
                 { label: 'Descripción', value: detailModal.data.descripcion || 'N/A' },
                 {
                   label: 'Precio de Venta',
-                  value: hasNumericValue(detailModal.data.precio_venta)
-                    ? `$${Number(detailModal.data.precio_venta).toLocaleString('es-CO')}`
-                    : '—',
+                  value: `$${Number(detailModal.data.precio_venta || 0).toLocaleString('es-CO')}`,
                 },
-                {
-                  label: 'Stock Actual',
-                  value: hasNumericValue(detailModal.data.stock_actual) ? detailModal.data.stock_actual : '—',
-                },
-                {
-                  label: 'Stock Mínimo',
-                  value: hasNumericValue(detailModal.data.stock_minimo) ? detailModal.data.stock_minimo : '—',
-                },
+                { label: 'Stock Actual', value: detailModal.data.stock_actual },
+                { label: 'Stock Mínimo', value: detailModal.data.stock_minimo },
                 {
                   label: 'Fecha de Vencimiento',
-                  value: formatDate(detailModal.data.fecha_vencimiento),
+                  value: detailModal.data.fecha_vencimiento || 'N/A',
                 },
                 {
                   label: 'Ficha Técnica / Receta',
@@ -430,12 +464,25 @@ export default function ProductosPage() {
 
       <ConfirmDialog
         isOpen={deleteDialog.isOpen}
-        title="Eliminar Producto"
-        message={`¿Estás seguro de que deseas eliminar el producto "${deleteDialog.nombre}"? Esta acción no se puede deshacer.`}
-        confirmText="Eliminar"
+        title="Inactivar Producto"
+        message={`¿Estás seguro de que deseas inactivar el producto "${deleteDialog.nombre}"? Podrás activarlo de nuevo después.`}
+        confirmText="Inactivar"
         onConfirm={handleDelete}
         onCancel={() => setDeleteDialog({ isOpen: false, id: null, nombre: '' })}
         isLoading={isDeleting}
+      />
+
+      {/* Modal de confirmación para Cambio de Estado */}
+      <ConfirmDialog
+        isOpen={statusDialog.isOpen}
+        title={`Cambiar Estado a ${statusDialog.nextEstado}`}
+        message={`¿Estás seguro de que deseas cambiar el estado del producto "${statusDialog.producto?.nombre}" de ${statusDialog.producto?.estado || 'Disponible'} a ${statusDialog.nextEstado}?`}
+        confirmText={`Cambiar a ${statusDialog.nextEstado}`}
+        confirmVariant={statusDialog.nextEstado === 'Activo' ? 'success' : 'warning'}
+        onConfirm={handleConfirmStatusChange}
+        onCancel={() => setStatusDialog({ isOpen: false, producto: null, nextEstado: 'Activo' })}
+        isLoading={isUpdatingStatus}
+        loadingText="Cambiando estado…"
       />
     </div>
   );

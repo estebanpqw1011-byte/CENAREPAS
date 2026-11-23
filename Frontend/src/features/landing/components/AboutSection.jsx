@@ -129,7 +129,7 @@ export function AboutSection() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section id="nosotros" className="relative overflow-hidden -mt-px pt-10 sm:pt-14 pb-24 sm:pb-32 bg-[#fffbf0]">
+    <section id="nosotros" className="relative overflow-hidden -mt-px pt-10 sm:pt-14 pb-16 sm:pb-24 bg-[#fffbf0]">
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <motion.div
@@ -187,18 +187,18 @@ export function AboutSection() {
             transition={{ duration: 0.5 }}
             className="flex flex-col h-full"
           >
-            <div className="flex flex-col mb-4 lg:min-h-[115px]">
+            <div className="flex flex-col mb-4 lg:min-h-[128px]">
               <div className="flex items-center gap-2 mb-1.5">
-                <Wheat className="w-5 h-5 text-brand" aria-hidden />
+                <Wheat className="w-5 h-5 text-brand shrink-0" aria-hidden />
                 <h3 className="text-lg font-bold text-slate-900">Producción</h3>
               </div>
-              <p className="text-sm text-slate-600 leading-relaxed max-w-sm">
+              <p className="text-sm font-normal text-slate-600 leading-relaxed lg:min-h-[88px]">
                 El módulo de producción registra cada etapa en tiempo real. Así lo usa Masarepas
                 para seguir su producción diaria de arepas, del amasado al horneado.
               </p>
             </div>
 
-            <div className="relative rounded-2xl bg-gradient-to-b from-[#2a1206] to-[#1c0b03] border border-white/10 p-4 overflow-hidden flex-1 flex flex-col justify-between">
+            <div className="relative rounded-2xl bg-gradient-to-b from-[#2a1206] to-[#1c0b03] border border-white/10 p-4 overflow-hidden h-full flex-1 flex flex-col justify-between">
               <div>
                 <ActivityCard
                   icon={Wheat}
@@ -295,18 +295,18 @@ export function AboutSection() {
             transition={{ duration: 0.5, delay: 0.08 }}
             className="flex flex-col h-full"
           >
-            <div className="flex flex-col mb-4 lg:min-h-[115px]">
+            <div className="flex flex-col mb-4 lg:min-h-[128px]">
               <div className="flex items-center gap-2 mb-1.5">
-                <ShieldCheck className="w-5 h-5 text-accent-green" aria-hidden />
+                <ShieldCheck className="w-5 h-5 text-accent-green shrink-0" aria-hidden />
                 <h3 className="text-lg font-bold text-slate-900">Control de calidad</h3>
               </div>
-              <p className="text-sm text-slate-600 leading-relaxed max-w-sm">
+              <p className="text-sm font-normal text-slate-600 leading-relaxed lg:min-h-[88px]">
                 Cada lote se registra y aprueba antes de salir de la fábrica. Masarepas lo usa para
                 que ningún lote llegue al cliente sin pasar por control de calidad.
               </p>
             </div>
 
-            <div className="relative rounded-2xl bg-gradient-to-b from-[#2a1206] to-[#1c0b03] border border-white/10 p-4 overflow-hidden flex-1 flex flex-col justify-between">
+            <div className="relative rounded-2xl bg-gradient-to-b from-[#2a1206] to-[#1c0b03] border border-white/10 p-4 overflow-hidden h-full flex-1 flex flex-col justify-between">
               <div>
                 <ActivityCard
                   icon={Thermometer}
@@ -423,18 +423,18 @@ export function AboutSection() {
             transition={{ duration: 0.5, delay: 0.16 }}
             className="flex flex-col h-full"
           >
-            <div className="flex flex-col mb-4 lg:min-h-[115px]">
+            <div className="flex flex-col mb-4 lg:min-h-[128px]">
               <div className="flex items-center gap-2 mb-1.5">
-                <Truck className="w-5 h-5 text-accent-gold" aria-hidden />
+                <Truck className="w-5 h-5 text-accent-gold shrink-0" aria-hidden />
                 <h3 className="text-lg font-bold text-slate-900">Despacho y logística</h3>
               </div>
-              <p className="text-sm text-slate-600 leading-relaxed max-w-sm">
+              <p className="text-sm font-normal text-slate-600 leading-relaxed lg:min-h-[88px]">
                 El módulo de pedidos conecta producción con entrega. Masarepas lo usa para saber,
                 en todo momento, qué pedido está listo y cuál sigue en ruta.
               </p>
             </div>
 
-            <div className="relative rounded-2xl bg-gradient-to-b from-[#2a1206] to-[#1c0b03] border border-white/10 p-4 overflow-hidden flex-1 flex flex-col justify-between">
+            <div className="relative rounded-2xl bg-gradient-to-b from-[#2a1206] to-[#1c0b03] border border-white/10 p-4 overflow-hidden h-full flex-1 flex flex-col justify-between">
               <div>
                 <ActivityCard
                   icon={Package}

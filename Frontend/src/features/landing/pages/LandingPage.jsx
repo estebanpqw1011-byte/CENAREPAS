@@ -2,7 +2,7 @@ import { SiteHeader } from '../components/SiteHeader';
 import { HeroSection } from '../components/HeroSection';
 import { AboutSection } from '../components/AboutSection';
 import { StatsSection } from '../components/StatsSection';
-import { ProductsSection } from '../components/ProductsSection';
+import { CatalogoSection } from '../components/CatalogoSection';
 import { Ventajas } from '../components/Ventajas';
 import { ContactSection } from '../components/ContactSection';
 import { CTASection } from '../components/CTASection';
@@ -18,7 +18,7 @@ export default function LandingPage() {
         <HeroSection />
         <AboutSection />
         <StatsSection />
-        <ProductsSection />
+        <CatalogoSection />
         <Ventajas />
         <ContactSection />
         <CTASection />

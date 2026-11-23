@@ -311,4 +311,3 @@ CREATE INDEX IF NOT EXISTS idx_detalle_venta_venta ON detalle_venta (id_venta);
 CREATE INDEX IF NOT EXISTS idx_detalle_pedido_pedido ON detalle_pedido (id_pedido);
 CREATE INDEX IF NOT EXISTS idx_lote_produccion_ficha ON lote_produccion (id_ficha);
 CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria (id_usuario);
-Mostrando script_cenarepas.sql.

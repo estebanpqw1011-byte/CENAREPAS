@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getFichasTecnicas, createFichaTecnica, updateFichaTecnica, deleteFichaTecnica } from '../services/fichasTecnicasService';
+import { getFichasTecnicas, createFichaTecnica, updateFichaTecnica, deleteFichaTecnica, cambiarEstadoFichaTecnica } from '../services/fichasTecnicasService';
 import { toast } from '../../../shared/utils/toast';
 
 export function useFichasTecnicas() {
@@ -9,22 +9,27 @@ export function useFichasTecnicas() {
   const [showModal, setShowModal] = useState(false);
   const [detailModal, setDetailModal] = useState({ isOpen: false, data: null });
   const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, id: null, nombre: '' });
+  const [statusDialog, setStatusDialog] = useState({ isOpen: false, ficha: null, nextEstado: 'Activo' });
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasLoadError, setHasLoadError] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
-  useEffect(() => {
-    getFichasTecnicas()
-      .then((data) => {
-        if (!Array.isArray(data)) throw new Error('La respuesta de fichas técnicas no es válida');
-        setFichas(data);
-      })
-      .catch(() => {
-        setHasLoadError(true);
-        toast.error('No se pudieron cargar las fichas técnicas');
+  const fetchFichasTecnicas = () => {
+    setIsLoading(true);
+    setLoadError(null);
+    return getFichasTecnicas()
+      .then((data) => setFichas(Array.isArray(data) ? data : []))
+      .catch((error) => {
+        setFichas([]);
+        setLoadError(error?.message || 'No se pudieron cargar las fichas técnicas');
       })
       .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    fetchFichasTecnicas();
   }, []);
 
   const filteredFichas = useMemo(() => {
@@ -56,7 +61,7 @@ export function useFichasTecnicas() {
       }
       setShowModal(false);
     } catch (error) {
-      toast.error('No se pudo guardar la ficha técnica');
+      toast.error(error?.data?.message || 'No se pudo guardar la ficha técnica');
     } finally {
       setIsSaving(false);
     }
@@ -67,13 +72,48 @@ export function useFichasTecnicas() {
     setIsDeleting(true);
     try {
       await deleteFichaTecnica(deleteDialog.id);
-      setFichas((prev) => prev.filter((f) => f.id_ficha !== deleteDialog.id));
-      toast.success('Ficha técnica eliminada');
-    } catch (error) {
+      setFichas((prev) =>
+        prev.map((f) => (f.id_ficha === deleteDialog.id ? { ...f, estado: 'Inactivo' } : f))
+      );
+      toast.success('Ficha técnica inactivada');
+    } catch {
       toast.error('No se pudo eliminar la ficha técnica');
     } finally {
       setIsDeleting(false);
       setDeleteDialog({ isOpen: false, id: null, nombre: '' });
+    }
+  };
+
+  const handleRequestStatusChange = (ficha) => {
+    if (!ficha) return;
+    const isCurrentlyActive = String(ficha.estado || '').toLowerCase() === 'activo' || String(ficha.estado || '').toLowerCase() === 'vigente';
+    const nextEstado = isCurrentlyActive ? 'Inactivo' : 'Activo';
+    setStatusDialog({
+      isOpen: true,
+      ficha,
+      nextEstado,
+    });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!statusDialog.ficha) return;
+    setIsUpdatingStatus(true);
+    try {
+      const { id_ficha, nombre } = statusDialog.ficha;
+      const actualizado = await cambiarEstadoFichaTecnica(id_ficha, statusDialog.nextEstado);
+
+      setFichas((prev) =>
+        prev.map((f) =>
+          f.id_ficha === id_ficha ? { ...f, estado: actualizado?.estado || statusDialog.nextEstado } : f
+        )
+      );
+
+      toast.success(`Estado de la receta "${nombre}" cambiado a ${statusDialog.nextEstado}`);
+      setStatusDialog({ isOpen: false, ficha: null, nextEstado: 'Activo' });
+    } catch (error) {
+      toast.error(error?.data?.message || 'No se pudo actualizar el estado de la ficha técnica');
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -90,11 +130,17 @@ export function useFichasTecnicas() {
     setDetailModal,
     deleteDialog,
     setDeleteDialog,
+    statusDialog,
+    setStatusDialog,
     isDeleting,
     isSaving,
+    isUpdatingStatus,
     isLoading,
-    hasLoadError,
+    loadError,
+    refetch: fetchFichasTecnicas,
     handleSave,
     handleDelete,
+    handleRequestStatusChange,
+    handleConfirmStatusChange,
   };
 }

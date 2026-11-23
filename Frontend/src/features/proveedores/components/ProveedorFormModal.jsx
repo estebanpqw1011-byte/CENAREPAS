@@ -1,177 +1,197 @@
-import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Phone, Mail, MapPin } from 'lucide-react';
 import { Combobox } from '../../../shared/ui/Combobox';
+import { StepperModal } from '../../../shared/components/StepperModal';
+import { PersonaFields } from '../../../shared/components/PersonaFields';
+import { personaDe, validarPersona, personaPayload, personaCambio } from '../../../shared/utils/persona';
 
-export function ProveedorFormModal({ open, onClose, proveedor = null, onSave, isLoading = false }) {
-  const [nombre, setNombre] = useState('');
-  const [nit, setNit] = useState('');
+const PERSONA_NUEVA = { tipoPorDefecto: 'Jurídica' };
+
+const etiqueta = 'block text-xs sm:text-sm font-semibold text-foreground mb-1.5';
+const campo =
+  'w-full h-10 pl-10 pr-4 border border-input bg-input-background rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all read-only:opacity-80';
+
+/** Título de cada grupo del formulario (y del detalle). */
+function Grupo({ titulo }) {
+  return (
+    <h3 className="sm:col-span-2 pt-2 first:pt-0 text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border pb-1.5">
+      {titulo}
+    </h3>
+  );
+}
+
+/**
+ * Formulario único de proveedores. modo: 'crear' | 'editar' | 'ver' (por
+ * defecto, 'editar' si llega un proveedor y 'crear' si no). Los campos van
+ * agrupados en este orden: identificación → contacto → ubicación → estado.
+ * En 'ver' es el detalle: todo de solo lectura y sin botón de guardar.
+ */
+export function ProveedorFormModal({ open, onClose, proveedor = null, onSave, isLoading = false, modo }) {
+  const modoActual = modo || (proveedor ? 'editar' : 'crear');
+  const soloLectura = modoActual === 'ver';
+  // Proveedor nuevo: Jurídica con NIT, como la mayoría.
+  const [persona, setPersona] = useState(() => personaDe(null, PERSONA_NUEVA));
   const [telefono, setTelefono] = useState('');
   const [correo, setCorreo] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [estado, setEstado] = useState('activo');
+  const [estado, setEstado] = useState('Activo');
 
   useEffect(() => {
-    if (proveedor) {
-      setNombre(proveedor.nombre || '');
-      setNit(proveedor.nit || '');
-      setTelefono(proveedor.telefono || '');
-      setCorreo(proveedor.correo || '');
-      setDireccion(proveedor.direccion || '');
-      setEstado(proveedor.estado || 'activo');
-    } else {
-      setNombre('');
-      setNit('');
-      setTelefono('');
-      setCorreo('');
-      setDireccion('');
-      setEstado('activo');
-    }
+    if (!open) return;
+    setPersona(personaDe(proveedor, PERSONA_NUEVA));
+    setTelefono(proveedor?.telefono || '');
+    setCorreo(proveedor?.correo || '');
+    setDireccion(proveedor?.direccion || '');
+    const inactivo = String(proveedor?.estado ?? '').toLowerCase() === 'inactivo';
+    setEstado(inactivo ? 'Inactivo' : 'Activo');
   }, [proveedor, open]);
 
-  if (!open) return null;
+  const isDirty = useMemo(() => {
+    if (!open || soloLectura) return false;
+    return (
+      personaCambio(persona, proveedor, PERSONA_NUEVA) ||
+      telefono !== (proveedor?.telefono || '') ||
+      correo !== (proveedor?.correo || '') ||
+      direccion !== (proveedor?.direccion || '') ||
+      (proveedor ? estado.toLowerCase() !== String(proveedor.estado || 'Activo').toLowerCase() : false)
+    );
+  }, [open, soloLectura, proveedor, persona, telefono, correo, direccion, estado]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!nombre.trim()) return;
-
-    const payload = proveedor
-      ? {
-          ...proveedor,
-          nombre: nombre.trim(),
-          nit: nit.trim(),
-          telefono: telefono.trim() || null,
-          correo: correo.trim() || null,
-          direccion: direccion.trim() || null,
-          estado,
-        }
-      : {
-          nombre: nombre.trim(),
-          nit: nit.trim(),
-          telefono: telefono.trim() || null,
-          correo: correo.trim() || null,
-          direccion: direccion.trim() || null,
-          estado: estado || 'activo',
-        };
-
-    if (onSave) {
-      onSave(payload);
-    } else {
-      onClose();
+  const validar = useCallback(() => {
+    const v = validarPersona(persona);
+    if (v !== true) return v;
+    if (correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
+      return 'El correo electrónico no tiene un formato válido.';
     }
-  };
+    return true;
+  }, [persona, correo]);
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="form-modal-panel bg-card p-6 rounded-lg max-w-lg w-full border border-border space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-start justify-between gap-4">
-          <h2 className="text-lg font-bold">{proveedor ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 -mr-2 -mt-2 rounded-lg hover:bg-muted text-muted-foreground"
-            aria-label="Cerrar formulario"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="modal-form-grid space-y-4">
-          <div className="modal-field-wide">
-            <label htmlFor="proveedor_nombre" className="block mb-2 text-sm font-medium">Nombre / Razón Social *</label>
-            <input
-              id="proveedor_nombre"
-              name="nombre"
-              type="text"
-              maxLength={150}
-              required
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="proveedor_nit" className="block mb-2 text-sm font-medium">NIT / Cédula *</label>
-              <input
-                id="proveedor_nit"
-                name="nit"
-                type="text"
-                maxLength={20}
-                required
-                value={nit}
-                onChange={(e) => setNit(e.target.value)}
-                className="w-full px-4 py-2 border border-input bg-input-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div>
-              <label htmlFor="proveedor_telefono" className="block mb-2 text-sm font-medium">Teléfono</label>
+  const handleSubmit = useCallback(() => {
+    if (validar() !== true) return;
+    // `nombre` no se envía: el backend lo arma con nombres + apellidos o razón social.
+    const { nombre: _nombre, ...proveedorSinNombre } = proveedor || {};
+    const payload = {
+      ...proveedorSinNombre,
+      ...personaPayload(persona),
+      nit: persona.documento.trim(),
+      telefono: telefono.trim() || null,
+      correo: correo.trim() || null,
+      direccion: direccion.trim() || null,
+      estado,
+    };
+    if (onSave) onSave(payload);
+    else onClose();
+  }, [validar, proveedor, persona, telefono, correo, direccion, estado, onSave, onClose]);
+
+  const steps = useMemo(() => [
+    {
+      id: 'datos-proveedor',
+      title: 'Datos del proveedor',
+      description: 'Identificación, contacto, ubicación y estado',
+      validate: validar,
+      content: (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 items-start">
+          <Grupo titulo="Identificación" />
+          <PersonaFields persona={persona} onChange={setPersona} prefijo="proveedor" soloLectura={soloLectura} autoFocus />
+
+          <Grupo titulo="Contacto" />
+          <div className="sm:col-span-1">
+            <label htmlFor="proveedor_telefono" className={etiqueta}>Teléfono</label>
+            <div className="relative">
+              <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
               <input
                 id="proveedor_telefono"
                 name="telefono"
                 type="tel"
                 maxLength={20}
+                readOnly={soloLectura}
+                placeholder={soloLectura ? 'Sin teléfono' : '+57 310 123 4567'}
                 value={telefono}
                 onChange={(e) => setTelefono(e.target.value)}
-                className="w-full px-4 py-2 border border-input bg-input-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={campo}
               />
             </div>
           </div>
-          <div className="modal-field-wide">
-            <label htmlFor="proveedor_correo" className="block mb-2 text-sm font-medium">Correo Electrónico</label>
-            <input
-              id="proveedor_correo"
-              name="correo"
-              type="email"
-              maxLength={150}
-              value={correo}
-              onChange={(e) => setCorreo(e.target.value)}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+          <div className="sm:col-span-1">
+            <label htmlFor="proveedor_correo" className={etiqueta}>Correo electrónico</label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <input
+                id="proveedor_correo"
+                name="correo"
+                type="email"
+                maxLength={150}
+                readOnly={soloLectura}
+                placeholder={soloLectura ? 'Sin correo' : 'ventas@proveedor.com'}
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+                className={campo}
+              />
+            </div>
           </div>
-          <div className="modal-field-wide">
-            <label htmlFor="proveedor_direccion" className="block mb-2 text-sm font-medium">Dirección</label>
-            <input
-              id="proveedor_direccion"
-              name="direccion"
-              type="text"
-              maxLength={255}
-              value={direccion}
-              onChange={(e) => setDireccion(e.target.value)}
-              className="w-full px-4 py-2 border border-input bg-input-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+
+          <Grupo titulo="Ubicación" />
+          <div className="sm:col-span-2">
+            <label htmlFor="proveedor_direccion" className={etiqueta}>Dirección de la sede o bodega</label>
+            <div className="relative">
+              <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <input
+                id="proveedor_direccion"
+                name="direccion"
+                type="text"
+                maxLength={255}
+                readOnly={soloLectura}
+                placeholder={soloLectura ? 'Sin dirección' : 'Ej. Carrera 5 # 18-40, Zona Industrial'}
+                value={direccion}
+                onChange={(e) => setDireccion(e.target.value)}
+                className={campo}
+              />
+            </div>
           </div>
-          <div className="modal-field-wide">
-            <label htmlFor="proveedor_estado" className="block mb-2 text-sm font-medium">Estado</label>
+
+          <Grupo titulo="Estado" />
+          <div className="sm:col-span-1">
+            <label htmlFor="proveedor_estado" className={etiqueta}>
+              Estado <span className="text-destructive font-bold ml-0.5">*</span>
+            </label>
             <Combobox
               id="proveedor_estado"
               name="estado"
               value={estado}
               onChange={(e) => setEstado(e.target.value)}
+              disabled={soloLectura}
               options={[
-                { value: 'activo', label: 'Activo' },
-                { value: 'inactivo', label: 'Inactivo' },
+                { value: 'Activo', label: 'Activo' },
+                { value: 'Inactivo', label: 'Inactivo' },
               ]}
             />
           </div>
-          <div className="flex gap-2 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-muted text-sm font-medium transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 text-sm font-medium transition-colors shadow-xs cursor-pointer"
-            >
-              {isLoading ? 'Guardando...' : proveedor ? 'Guardar Cambios' : 'Guardar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          {soloLectura && proveedor?.fecha_creacion && (
+            <div className="sm:col-span-1">
+              <span className={etiqueta}>Fecha de creación</span>
+              <p className="h-10 flex items-center text-sm text-foreground">{proveedor.fecha_creacion}</p>
+            </div>
+          )}
+        </div>
+      ),
+    },
+  ], [persona, telefono, correo, direccion, estado, soloLectura, proveedor, validar]);
+
+  return (
+    <StepperModal
+      isOpen={open}
+      onClose={onClose}
+      category="COMPRAS"
+      title={{ crear: 'Nuevo Proveedor', editar: 'Editar Proveedor', ver: 'Detalle del Proveedor' }[modoActual]}
+      subtitle="Información de identificación, contacto y ubicación del proveedor"
+      steps={steps}
+      onSubmit={handleSubmit}
+      isLoading={isLoading}
+      submitLabel={modoActual === 'editar' ? 'Guardar Cambios' : 'Crear Proveedor'}
+      mode={soloLectura ? 'view' : modoActual === 'editar' ? 'edit' : 'create'}
+      isDirty={isDirty}
+    />
   );
 }
 
+export default ProveedorFormModal;
